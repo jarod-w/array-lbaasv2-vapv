@@ -1,0 +1,56 @@
+#!/usr/bin/bash
+
+MGMT_NETWORK=${1}
+MGMT_SUBNET=${2}
+KEYSTONERC=${3}
+
+[ -z "${MGMT_NETWORK}" ] || [ -z "${MGMT_SUBNET}" ] && {
+    echo $"Usage: array_lbaas_init_network <mgmt_network> <mgmt_subnet> [keystonerc admin file]" >&2
+    exit 1
+}
+
+[ -z "${KEYSTONERC}" ] && {
+    KEYSTONERC="/root/keystonerc_admin"
+}
+
+[ ! -f "$KEYSTONERC" ] && {
+    echo $"Please input the valid keystonerc admin file" >&2
+    exit 2
+}
+
+source $KEYSTONERC
+
+NET_ID=$(neutron net-show -c id -f value $MGMT_NETWORK)
+if [ U"$NET_ID" = U"" ]; then
+    echo "You inputed net doesn't exist."
+    exit 3
+fi
+
+SUBNET_ID=$(neutron subnet-show -c id -f value $MGMT_SUBNET)
+if [ U"$SUBNET_ID" = U"" ]; then
+    echo "You inputed subnet doesn't exist."
+    exit 4
+fi
+
+#MGMT_NETWORK=lb-mgmt-net
+#MGMT_SUBNET=lb-mgmt-subnet
+PORT_NAME=vapv-manager-port
+DHCLIENT_CONF='/etc/dhcp/octavia/dhclient.conf'
+
+
+PORT_ID=$(neutron port-show -c id -f value $PORT_NAME)
+
+if [ d"$PORT_ID" = d"" ]; then
+    PORT_ID=$(neutron port-create -c id -f value --security-group lb-health-mgr-sec-grp --fixed-ip subnet_id=$MGMT_SUBNET --name $PORT_NAME $MGMT_NETWORK)
+fi
+
+PORT_MAC=$(neutron port-show -c mac_address -f value $PORT_NAME)
+
+echo $PORT_ID
+echo $PORT_MAC
+
+ovs-vsctl -- --may-exist add-port br-int o-hm0 -- set Interface o-hm0 type=internal -- set Interface o-hm0 external-ids:iface-status=active -- set Interface o-hm0 external-ids:attached-mac=$PORT_MAC -- set Interface o-hm0 external-ids:iface-id=$PORT_ID -- set Interface o-hm0 external-ids:skip_cleanup=true
+
+ip link set dev o-hm0 address $PORT_MAC
+
+dhclient -v o-hm0 -cf $DHCLIENT_CONF

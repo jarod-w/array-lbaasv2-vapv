@@ -1,0 +1,307 @@
+#!/usr/bin/python
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+#
+#
+
+from getpass import getpass
+import socket
+from subprocess import call
+import sys
+
+config_data = {}
+
+class InvalidIpAddressError(Exception):
+    def __init__(self, ip):
+        self.ip = ip
+
+
+class Question(object):
+    class Answer(object):
+        def __init__(self, value, next_link, action=None, action_data=None):
+            self.value = value
+            self.next_link = next_link
+            self.action = action
+            self.action_data = action_data
+
+    def __init__(self, text, section, field_name, options=None, default=None,
+                 masked=False, var_type=None, next_link=None, action=None,
+                 action_data=None):
+        self.text = text
+        self.section = section
+        self.field_name = field_name
+        self.options = options
+        self.default = default
+        self.masked = masked
+        self.var_type = var_type
+        self.next_link = next_link
+        self.action = action
+        self.action_data = action_data
+
+    def ask(self):
+        print "\n%s" % self.text
+        if self.options:
+            for i, opt in enumerate(self.options, 1):
+                print "\t%s) %s" % (i, opt['name'])
+            answer = 0
+            while True:
+                try:
+                    answer = int(raw_input(
+                        "Please enter your choice [1-%s]: " % len(self.options)
+                    ))
+                    if 1 <= answer <= len(self.options):
+                        break
+                except ValueError:
+                    answer = 0
+                print("Invalid input, please enter a number "
+                      "in the range 1 to %s" % len(self.options))
+            try:
+                next_l = self.options[answer - 1]['next_link']
+            except KeyError:
+                next_l = self.next_link
+            return self.Answer(self.options[answer - 1]['value'], next_l)
+        else:
+            while True:
+                if self.default:
+                    answer = raw_input(
+                        "Input%s:" % " (Default=%s)" % self.default or ""
+                    ) or self.default
+                else:
+                    answer = ""
+                    while answer == "":
+                        if self.masked:
+                            answer = getpass("Input (hidden): ")
+                        else:
+                            answer = raw_input("Input: ")
+                        if answer == "":
+                            print "This setting has no default; " + \
+                                  "please enter a value: "
+                if self.var_type is not None:
+                    try:
+                        self.var_type(answer)
+                    except ValueError:
+                        print "Invalid input: must be %s" % self.var_type
+                        continue
+                    except InvalidIpAddressError as e:
+                        print "Invalid IP address %s specified" % e.ip
+                        continue
+                return self.Answer(
+                    answer, self.next_link, self.action, self.action_data
+                )
+
+
+def ip_address(ip_addr):
+    if ip_addr in ["0.0.0.0", "255.255.255.255"]:
+        raise InvalidIpAddressError(ip_addr)
+    try:
+        socket.inet_pton(socket.AF_INET, ip_addr)
+    except:
+        try:
+            socket.inet_pton(socket.AF_INET6, ip_addr)
+        except:
+            raise InvalidIpAddressError(ip_addr)
+
+
+def ip_address_list(ip_list):
+    ip_addresses = [ip.strip() for ip in ip_list.split(",")]
+    for ip in ip_addresses:
+        ip_address(ip)
+
+
+question_chain = {
+    "start": [
+        Question("What deployment model are you using?", "lbaas_settings",
+                 "deployment_model", options=[
+                     {"name": "Private Traffic Manager instances for each tenant", "value": None,
+                      "next_link": "vapv_private"}])
+    ],
+    "vapv_private": [
+        Question("Which deployment model do you wish to use?",
+                 "lbaas_settings", "deployment_model", options=[
+                     {"name": "A vAPV per tenant", "value": "PER_TENANT"},
+                     {"name": "A vAPV per subnet", "value": "PER_SUBNET"},
+                     {"name": "A vAPV per loadbalancer object (VIP)",
+                      "value": "PER_LOADBALANCER"}]),
+        Question("How should vAPVs be deployed?", "lbaas_settings",
+                 "deploy_ha_pairs", options=[
+                     {"name": "As single instances", "value": False,
+                      "next_link": "vapv_private_mtu"},
+                     {"name": "As HA pairs", "value": True,
+                      "next_link": "vapv_private_ha_instance_separation"}])
+    ],
+    "vapv_private_ha_instance_separation": [
+        Question("Do you wish to use the Nova scheduler 'different_host' "
+                 "hint to ensure primary and secondary instances are created "
+                 "on different compute hosts (N.B. select 'No' if you only have "
+                 "one compute host or a failure will occur)?",
+                 "lbaas_settings", "allow_different_host_hint",
+                 options=[{"name": "Yes", "value": True},
+                          {"name": "No", "value": False}]),
+        Question("Do you wish to specify Availability Zones for primary and "
+                 "secondary vAPV instances?", "lbaas_settings", "specify_az",
+                 options=[{"name": "Yes", "value": True, 
+                           "next_link": "vapv_private_ha_specify_az"},
+                          {"name": "No", "value": False, 
+                           "next_link": "vapv_private_mtu"}])
+    ],
+    "vapv_private_ha_specify_az": [
+        Question("Please specify the name of the Availability Zone for "
+                 "primary vAPVs", "lbaas_settings", "primary_az"),
+        Question("Please specify the name of the Availability Zone for "
+                 "secondary vAPVs", "lbaas_settings", "secondary_az",
+                 next_link="vapv_private_mtu")
+    ],
+    "vapv_private_mtu": [
+        Question("What MTU should be used by the vAPV network interfaces?",
+                 "vapv_settings", "mtu", options=[
+                     {"name": "1500 (local/flat/VLAN)",
+                      "value": 1500, "next_link": "vapv_private_infra"},
+                     {"name": "1476 (GRE)",
+                      "value": 1476, "next_link": "vapv_private_infra"},
+                     {"name": "1450 (VXLAN)",
+                      "value": 1450, "next_link": "vapv_private_infra"},
+                     {"name": "Custom", "value": "",
+                      "next_link": "vapv_private_mtu_custom"}])
+    ],
+    "vapv_private_mtu_custom": [
+        Question("Enter custom MTU value:", "vapv_settings", "mtu",
+                 var_type=int, next_link="vapv_private_infra")
+    ],
+    "vapv_private_infra": [
+        Question("What is the Service Endpoint Address of your "
+                 "Services Director cluster?",
+                 "lbaas_settings", "service_endpoint_address",
+                 var_type=ip_address),
+        Question("What is the Glance ID of the vAPV image to use?",
+                 "lbaas_settings", "image_id"),
+        Question("What is the Nova ID of the flavor to use for vAPVs? "
+                 "(must be at least 2GB RAM/16GB disk)",
+                 "lbaas_settings", "flavor_id"),
+        Question("Which management mode should be used?", "lbaas_settings",
+                 "management_mode", options=[
+                     {"name": "Dedicated management network",
+                      "value": "MGMT_NET", "next_link": "vapv_private_mgmtnet"},
+                     {"name": "Floating IP addresses", "value": "FLOATING_IP",
+                      "next_link": "vapv_private_flip"}])
+    ],
+    "vapv_private_mgmtnet": [
+        Question("What is the Neutron ID of the management network?",
+                 "lbaas_settings", "management_network",
+                 next_link="vapv_private_sdsettings")
+    ],
+    "vapv_private_flip": [
+        Question("What is the Neutron ID of the network on which to raise "
+                 "the floating IPs?", "lbaas_settings", "management_network",
+                 next_link="vapv_private_sdsettings")
+    ],
+    "vapv_private_sdsettings": [
+        Question("How much bandwidth (Mbps) should each vAPV be allocated?",
+                 "services_director_settings", "bandwidth", var_type=int,
+                 next_link="vapv_all_override_settings")
+    ],
+    "vapv_all_override_settings": [
+        Question("Enable per-tenant configuration customizations database?",
+                 "lbaas_settings", "allow_tenant_customizations", options=[
+                     {"name": "Yes", "value": True,
+                      "next_link": "vapv_all_override_database"},
+                     {"name": "No", "value": False,
+                      "next_link": "vapv_all_vapvsettings"}])
+    ],
+    "vapv_all_override_database":[
+        Question("What is the connection string for customization database "
+                 "(<db_type>://<username>:<password>@<db_host>/<db_name>)? ",
+                 "lbaas_settings", "tenant_customizations_db", 
+                 next_link="vapv_all_vapvsettings")
+    ],
+    "vapv_all_vapvsettings": [
+        Question("Should HTTPS off-load be supported? (Select 2 if Barbican "
+                 "is not available)?",
+                 "lbaas_settings", "https_offload", options=[
+                     {"name": "Yes", "value": True},
+                     {"name": "No", "value": False}]),
+        Question("Which TCP port does the vAPV REST API listen on?",
+                 "vapv_settings", "rest_port", default="9070",
+                 var_type=int, next_link="vapv_all_oscredentials"),
+    ],
+    "vapv_all_oscredentials": [
+        Question("What is the username for the OpenStack admin user?",
+                 "lbaas_settings", "openstack_username", default="admin"),
+        Question("What is the password for the OpenStack admin user?",
+                 "lbaas_settings", "openstack_password", masked=True),
+        Question("What is the project id for admin user?",
+                 "lbaas_settings", "admin_project_id", default="admin"),
+        Question("What is the username for the OpenStack lbaas user?",
+                 "lbaas_settings", "lbaas_project_username", default="admin"),
+        Question("What is the password for the OpenStack lbaas user?",
+                 "lbaas_settings", "lbaas_project_password", masked=True),
+        Question("What is the project id for lbaas user?",
+                 "lbaas_settings", "lbaas_project_id", default="admin"),
+        Question("Which Keystone version should be used?",
+                 "lbaas_settings", "keystone_version", options=[
+                     {"name": "v2", "value": "2"},
+                     {"name": "v3", "value": "3"}], next_link=None)
+    ]
+}
+
+
+def format_config():
+    file_text = ""
+    for section, parameters in config_data.iteritems():
+        file_text += "[%s]\n" % section
+        for key, value in sorted(parameters.iteritems()):
+            file_text += "%s=%s\n" % (key, value)
+        file_text += "\n"
+    return file_text
+
+
+def execute_question_chain(index):
+    for question in question_chain[index]:
+        answer = question.ask()
+        if answer.action is not None:
+            if answer.action == "run_cmd":
+                if answer.value is None:
+                    cmd = answer.action_data
+                else:
+                    cmd = answer.action_data % answer.value
+            elif answer.action == "write_file":
+                with open(answer.action_data, "w") as action_file:
+                    action_file.write(answer.value)
+        if answer.value is not None:
+            try:
+                config_data[question.section][question.field_name] = \
+                    answer.value
+            except KeyError:
+                config_data[question.section] = {}
+                config_data[question.section][question.field_name] = \
+                    answer.value
+        if answer.next_link is not None and answer.next_link != index:
+            execute_question_chain(answer.next_link)
+
+
+def main():
+    execute_question_chain("start")
+    config_text = format_config()
+    try:
+        with open(sys.argv[1], "w") as config_file:
+            config_file.write(config_text)
+        print "\nOutput successfully written to %s" % sys.argv[1]
+    except IndexError:
+        print "\n%s" % config_text
+    except Exception as e:
+        print "\nError occurred writing config to file: %s" % e
+        print "Dumping to screen instead...\n"
+        print config_text
+
+
+if __name__ == "__main__":
+    main()
