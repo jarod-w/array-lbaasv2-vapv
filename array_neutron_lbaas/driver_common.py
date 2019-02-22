@@ -19,12 +19,16 @@ from array_neutron_lbaas_customizations_db import helper \
     as customization_helper
 from array_neutron_lbaas.db import repository
 from array_neutron_lbaas.array import device_driver
-from neutron_lbaas.common.cert_manager import CERT_MANAGER_PLUGIN
 from neutron_lbaas.common.tls_utils.cert_parser import get_host_names
 from openstack_connector import OpenStackInterface
 from oslo_config import cfg
 from oslo_log import log as logging
 from traceback import format_exc
+try:
+    from neutron_lbaas.common.cert_manager import CERT_MANAGER_PLUGIN
+except ImportError:
+    from neutron_lbaas.common import cert_manager
+    CERT_MANAGER_PLUGIN = cert_manager.get_backend()
 
 LOG = logging.getLogger(__name__)
 
