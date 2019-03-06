@@ -230,7 +230,7 @@ question_chain = {
                      {"name": "Yes", "value": True},
                      {"name": "No", "value": False}]),
         Question("Which TCP port does the vAPV REST API listen on?",
-                 "vapv_settings", "rest_port", default="9070",
+                 "vapv_settings", "rest_port", default="9997",
                  var_type=int, next_link="vapv_all_oscredentials"),
     ],
     "vapv_all_oscredentials": [

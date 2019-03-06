@@ -45,8 +45,8 @@ class OpenStackInterface(object):
         self.admin_username = cfg.CONF.lbaas_settings.openstack_username
         self.admin_project_id = cfg.CONF.lbaas_settings.admin_project_id
 
-        self.lbaas_password = cfg.CONF.lbaas_settings.lbaas_password
-        self.lbaas_username = cfg.CONF.lbaas_settings.lbaas_username
+        self.lbaas_password = cfg.CONF.lbaas_settings.lbaas_project_password
+        self.lbaas_username = cfg.CONF.lbaas_settings.lbaas_project_username
         self.lbaas_project_id = cfg.CONF.lbaas_settings.lbaas_project_id
 
         # Get Neutron and Nova API endpoints...
