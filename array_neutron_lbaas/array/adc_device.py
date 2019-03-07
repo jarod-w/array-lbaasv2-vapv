@@ -78,27 +78,47 @@ class ADCDevice(object):
         return cmd
 
     @staticmethod
-    def import_ssl_key(vhost_name, key_content):
-        cmd = 'ssl import key %s\nYES\n%s\n...\n' % (vhost_name, key_content)
+    def import_ssl_key(vhost_name, key_content, domain_name=None):
+        if domain_name:
+            cmd = 'ssl import key %s %s\nYES\n%s\n...\n' % (vhost_name, domain_name, key_content)
+        else:
+            cmd = 'ssl import key %s\nYES\n%s\n...\n' % (vhost_name, key_content)
         return cmd
 
     @staticmethod
-    def import_ssl_cert(vhost_name, cert_content):
-        cmd = 'ssl import certificate %s\nYES\n%s\n...\n' % (vhost_name, cert_content)
-        return cmd
-
-    def activate_certificate(vhost_name):
-        cmd = "ssl activate certificate %s" % (vhost_name)
-        return cmd
-
-    @staticmethod
-    def start_vhost(vs_name):
-        cmd = 'ssl start %s' % (vs_name)
+    def import_ssl_cert(vhost_name, cert_content, domain_name=None):
+        if domain_name:
+            cmd = 'ssl import certificate %s 1 %s\nYES\n%s\n...\n' % (vhost_name, domain_name, cert_content)
+        else:
+            cmd = 'ssl import certificate %s\nYES\n%s\n...\n' % (vhost_name, cert_content)
         return cmd
 
     @staticmethod
-    def stop_vhost(vs_name):
-        cmd = 'ssl stop %s' % (vs_name)
+    def activate_certificate(vhost_name, domain_name=None):
+        if domain_name:
+            cmd = "ssl activate certificate %s 1 %s" % (vhost_name, domain_name)
+        else:
+            cmd = "ssl activate certificate %s" % (vhost_name)
+        return cmd
+
+    @staticmethod
+    def associate_domain_to_vhost(vhost_name, domain_name):
+        cmd = 'ssl sni %s %s' % (vhost_name, domain_name)
+        return cmd
+
+    @staticmethod
+    def disassociate_domain_to_vhost(vhost_name, domain_name):
+        cmd = 'ssl sni %s %s' % (vhost_name, domain_name)
+        return cmd
+
+    @staticmethod
+    def start_vhost(vhost_name):
+        cmd = 'ssl start %s' % (vhost_name)
+        return cmd
+
+    @staticmethod
+    def stop_vhost(vhost_name):
+        cmd = 'ssl stop %s' % (vhost_name)
         return cmd
 
     @staticmethod
