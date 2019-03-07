@@ -32,16 +32,30 @@ if [ U"$SUBNET_ID" = U"" ]; then
     exit 4
 fi
 
-#MGMT_NETWORK=lb-mgmt-net
-#MGMT_SUBNET=lb-mgmt-subnet
+function build_mgmt_network {
+    # Create security group and rules
+    neutron security-group-create lb-mgmt-sec-grp
+    neutron security-group-rule-create --protocol icmp lb-mgmt-sec-grp
+    neutron security-group-rule-create --protocol tcp --port-range-min 22 --port-range-max 22 lb-mgmt-sec-grp
+    neutron security-group-rule-create --protocol tcp --port-range-min 9997 --port-range-max 9997 lb-mgmt-sec-grp
+    neutron security-group-rule-create --protocol icmpv6 --ethertype IPv6 --remote-ip ::/0 lb-mgmt-sec-grp
+
+    # Create security group and rules
+    neutron security-group-create lb-health-mgmt-sec-grp
+}
+
+
 PORT_NAME=vapv-manager-port
 DHCLIENT_CONF='/etc/dhcp/octavia/dhclient.conf'
 
+SG_ID=$(neutron security-group-show -c id -f value lb-mgmt-sec-grp)
+if [ d"$SG_ID" = d"" ]; then
+    build_mgmt_network
+fi
 
 PORT_ID=$(neutron port-show -c id -f value $PORT_NAME)
-
 if [ d"$PORT_ID" = d"" ]; then
-    PORT_ID=$(neutron port-create -c id -f value --security-group lb-health-mgr-sec-grp --fixed-ip subnet_id=$MGMT_SUBNET --name $PORT_NAME $MGMT_NETWORK)
+    PORT_ID=$(neutron port-create -c id -f value --security-group lb-mgmt-sec-grp --fixed-ip subnet_id=$MGMT_SUBNET --name $PORT_NAME $MGMT_NETWORK)
 fi
 
 PORT_MAC=$(neutron port-show -c mac_address -f value $PORT_NAME)
@@ -49,8 +63,9 @@ PORT_MAC=$(neutron port-show -c mac_address -f value $PORT_NAME)
 echo $PORT_ID
 echo $PORT_MAC
 
+sleep 3
+
 ovs-vsctl -- --may-exist add-port br-int o-hm0 -- set Interface o-hm0 type=internal -- set Interface o-hm0 external-ids:iface-status=active -- set Interface o-hm0 external-ids:attached-mac=$PORT_MAC -- set Interface o-hm0 external-ids:iface-id=$PORT_ID -- set Interface o-hm0 external-ids:skip_cleanup=true
 
 ip link set dev o-hm0 address $PORT_MAC
-
 dhclient -v o-hm0 -cf $DHCLIENT_CONF

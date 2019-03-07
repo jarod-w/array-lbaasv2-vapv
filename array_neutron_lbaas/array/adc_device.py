@@ -68,6 +68,40 @@ class ADCDevice(object):
         return cmd
 
     @staticmethod
+    def create_ssl_vhost(vhost_name, vs_name):
+        cmd = "ssl host virtual %s %s" % (vhost_name, vs_name)
+        return cmd
+
+    @staticmethod
+    def no_ssl_vhost(vhost_name, vs_name):
+        cmd = "no ssl host virtual %s %s" % (vhost_name, vs_name)
+        return cmd
+
+    @staticmethod
+    def import_ssl_key(vhost_name, key_content):
+        cmd = 'ssl import key %s\nYES\n%s\n...\n' % (vhost_name, key_content)
+        return cmd
+
+    @staticmethod
+    def import_ssl_cert(vhost_name, cert_content):
+        cmd = 'ssl import certificate %s\nYES\n%s\n...\n' % (vhost_name, cert_content)
+        return cmd
+
+    def activate_certificate(vhost_name):
+        cmd = "ssl activate certificate %s" % (vhost_name)
+        return cmd
+
+    @staticmethod
+    def start_vhost(vs_name):
+        cmd = 'ssl start %s' % (vs_name)
+        return cmd
+
+    @staticmethod
+    def stop_vhost(vs_name):
+        cmd = 'ssl stop %s' % (vs_name)
+        return cmd
+
+    @staticmethod
     def create_group(name, lb_algorithm, sp_type):
         (algorithm, first_choice_method, policy) = \
             service_group_lb_method(lb_algorithm, sp_type)
@@ -171,11 +205,11 @@ class ADCDevice(object):
             hm_type = 'ICMP'
         cmd = None
         if hm_type == 'HTTP' or hm_type == 'HTTPS':
-            cmd = "slb health %s %s %s %s 2 %s %s $$%s$$ $$%s$$" % (hm_name, hm_type.lower(), \
+            cmd = "slb health %s %s %s %s 3 %s %s \"%s\" \"%s\"" % (hm_name, hm_type.lower(), \
                     str(hm_delay), str(hm_timeout), str(hm_max_retries), \
                     hm_http_method, hm_url, str(hm_expected_codes))
         else:
-            cmd = "slb health %s %s %s %s 2 %s" % (hm_name, hm_type.lower(), \
+            cmd = "slb health %s %s %s %s 3 %s" % (hm_name, hm_type.lower(), \
                     str(hm_delay), str(hm_timeout), str(hm_max_retries))
         return cmd
 
