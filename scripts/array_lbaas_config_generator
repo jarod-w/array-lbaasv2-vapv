@@ -120,12 +120,6 @@ def ip_address_list(ip_list):
 
 question_chain = {
     "start": [
-        Question("What deployment model are you using?", "lbaas_settings",
-                 "deployment_model", options=[
-                     {"name": "Private Traffic Manager instances for each tenant", "value": None,
-                      "next_link": "vapv_private"}])
-    ],
-    "vapv_private": [
         Question("Which deployment model do you wish to use?",
                  "lbaas_settings", "deployment_model", options=[
                      {"name": "A vAPV per tenant", "value": "PER_TENANT"},
@@ -185,7 +179,7 @@ question_chain = {
         Question("What is the Glance ID of the vAPV image to use?",
                  "lbaas_settings", "image_id"),
         Question("What is the Nova ID of the flavor to use for vAPVs? "
-                 "(must be at least 2GB RAM/16GB disk)",
+                 "(must be at least 2 vCPU/4GB RAM/42GB disk)",
                  "lbaas_settings", "flavor_id"),
         Question("Which management mode should be used?", "lbaas_settings",
                  "management_mode", options=[
@@ -195,7 +189,7 @@ question_chain = {
                       "next_link": "vapv_private_flip"}])
     ],
     "vapv_private_mgmtnet": [
-        Question("What is the Neutron ID of the management network?",
+        Question("What is the Neutron ID of the management subnet?",
                  "lbaas_settings", "management_network",
                  next_link="vapv_private_sdsettings")
     ],
@@ -239,13 +233,15 @@ question_chain = {
         Question("What is the password for the OpenStack admin user?",
                  "lbaas_settings", "openstack_password", masked=True),
         Question("What is the project id for admin user?",
-                 "lbaas_settings", "admin_project_id", default="admin"),
+                 "lbaas_settings", "admin_project_id"),
+                 #"lbaas_settings", "admin_project_id", default="admin"),
         Question("What is the username for the OpenStack lbaas user?",
                  "lbaas_settings", "lbaas_project_username", default="admin"),
         Question("What is the password for the OpenStack lbaas user?",
                  "lbaas_settings", "lbaas_project_password", masked=True),
         Question("What is the project id for lbaas user?",
-                 "lbaas_settings", "lbaas_project_id", default="admin"),
+                 "lbaas_settings", "lbaas_project_id"),
+                 #"lbaas_settings", "lbaas_project_id", default="admin"),
         Question("Which Keystone version should be used?",
                  "lbaas_settings", "keystone_version", options=[
                      {"name": "v2", "value": "2"},
