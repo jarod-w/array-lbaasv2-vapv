@@ -279,6 +279,12 @@ class ADCDevice(object):
         return cmd
 
     @staticmethod
+    def create_l7_policy(policy_id, rule_id):
+        cmd = "write memory"
+        return cmd
+
+
+    @staticmethod
     def write_memory():
         cmd = "write memory"
         return cmd

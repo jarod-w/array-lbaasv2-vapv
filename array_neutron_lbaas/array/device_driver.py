@@ -39,6 +39,7 @@ class ArrayADCDriver(object):
             management_ip = [vapv['pri_mgmt_address'],]
             driver = ArrayAPVAPIDriver(management_ip)
             driver.create_loadbalancer(argu)
+            driver.write_memory(argu)
 
 
     def update_loadbalancer(self, obj, old_obj):
@@ -53,6 +54,7 @@ class ArrayADCDriver(object):
         management_ip = [vapv['pri_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.delete_loadbalancer(argu)
+        driver.write_memory(argu)
 
 
     def get_stats(self, instance):
@@ -72,6 +74,7 @@ class ArrayADCDriver(object):
         management_ip = [vapv['pri_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.create_listener(argu)
+        driver.write_memory(argu)
 
 
     def update_listener(self, lb, listener, old, vapv):
@@ -95,6 +98,7 @@ class ArrayADCDriver(object):
         management_ip = [vapv['pri_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.delete_listener(argu)
+        driver.write_memory(argu)
 
 
     def create_pool(self, pool, vapv):
@@ -116,6 +120,7 @@ class ArrayADCDriver(object):
         management_ip = [vapv['pri_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.create_pool(argu)
+        driver.write_memory(argu)
 
 
     def update_pool(self, obj, old_obj, vapv):
@@ -162,6 +167,7 @@ class ArrayADCDriver(object):
         management_ip = [vapv['pri_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.delete_pool(argu)
+        driver.write_memory(argu)
 
     def create_member(self, member, vapv):
         argu = {}
@@ -179,6 +185,7 @@ class ArrayADCDriver(object):
         management_ip = [vapv['pri_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.create_member(argu)
+        driver.write_memory(argu)
 
     def update_member(self, member, old, vapv):
         # see: https://wiki.openstack.org/wiki/Neutron/LBaaS/API_2.0#Update_a_Member_of_a_Pool
@@ -198,6 +205,7 @@ class ArrayADCDriver(object):
         management_ip = [vapv['pri_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.delete_member(argu)
+        driver.write_memory(argu)
 
     def create_health_monitor(self, hm, vapv):
         argu = {}
@@ -218,6 +226,7 @@ class ArrayADCDriver(object):
         management_ip = [vapv['pri_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.create_health_monitor(argu)
+        driver.write_memory(argu)
 
     def update_health_monitor(self, hm, old, vapv):
 
@@ -245,4 +254,5 @@ class ArrayADCDriver(object):
         management_ip = [vapv['pri_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.delete_health_monitor(argu)
+        driver.write_memory(argu)
 

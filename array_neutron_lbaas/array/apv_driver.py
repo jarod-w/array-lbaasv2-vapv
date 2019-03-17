@@ -269,6 +269,12 @@ class ArrayAPVAPIDriver(object):
             self.run_cli_extend(base_rest_url, cmd_apv_no_hm)
 
 
+    def write_memory(self, argu):
+        cmd_apv_write_memory = ADCDevice.write_memory()
+        for base_rest_url in self.base_rest_urls:
+            self.run_cli_extend(base_rest_url, cmd_apv_write_memory)
+
+
     def run_cli_extend(self, base_rest_url, cmd):
         url = base_rest_url + '/cli_extend'
         payload = {
