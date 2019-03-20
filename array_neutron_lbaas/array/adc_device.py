@@ -249,33 +249,33 @@ class ADCDevice(object):
         return cmd
 
     @staticmethod
-    def cluster_config_virtual_interface(interface_name):
-        cmd = "cluster virtual ifname %s 100" % interface_name
+    def cluster_config_virtual_interface(cluster_id):
+        cmd = "cluster virtual ifname port2 %s" % cluster_id
         return cmd
 
     @staticmethod
-    def cluster_clear_virtual_interface(interface_name):
-        cmd = "clear cluster virtual ifname %s 100" % interface_name
+    def cluster_clear_virtual_interface(cluster_id):
+        cmd = "clear cluster virtual ifname port2 %s" % cluster_id
         return cmd
 
     @staticmethod
-    def cluster_config_vip(interface_name, vip_address):
-        cmd = "cluster virtual vip %s 100 %s" % (interface_name, vip_address)
+    def cluster_config_vip(cluster_id, vip_address):
+        cmd = "cluster virtual vip port2 %s %s" % (cluster_id, vip_address)
         return cmd
 
     @staticmethod
-    def cluster_config_priority(interface_name, priority):
-        cmd = "cluster virtual priority %s 100 %d" % (interface_name, priority)
+    def cluster_config_priority(cluster_id, priority):
+        cmd = "cluster virtual priority port2 %s %s" % (cluster_id, priority)
         return cmd
 
     @staticmethod
-    def cluster_enable(interface_name):
-        cmd = "cluster virtual on 100 %s" % (interface_name)
+    def cluster_enable(cluster_id):
+        cmd = "cluster virtual on %s port2" % (cluster_id)
         return cmd
 
     @staticmethod
-    def cluster_disable(interface_name):
-        cmd = "cluster virtual off 100 %s" % (interface_name)
+    def cluster_disable(cluster_id):
+        cmd = "cluster virtual off %s port2" % (cluster_id)
         return cmd
 
     @staticmethod

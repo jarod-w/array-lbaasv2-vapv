@@ -34,7 +34,7 @@ class ArrayADCDriver(object):
 
         if len(network_config) == 2:
             argu['vip_address'] = network_config['pri_data_ip']
-            argu['netmask'] = network_config['pri_data_netmask']
+            argu['netmask'] = network_config['data_netmask']
 
             management_ip = [vapv['pri_mgmt_address'],]
             driver = ArrayAPVAPIDriver(management_ip)

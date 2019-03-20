@@ -26,6 +26,7 @@ class ArrayAmphora(BaseTable, models_v2.HasId, models_v2.HasTenant):
     pri_mgmt_address = sa.Column(sa.String(64), nullable=True)
     sec_mgmt_address = sa.Column(sa.String(64), nullable=True)
     hostname = sa.Column(sa.String(64), nullable=True)
+    cluster_id = sa.Column(sa.Integer(), nullable=True)
 
     def to_dict(self, **kwargs):
         ret = {}

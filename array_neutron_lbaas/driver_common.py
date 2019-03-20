@@ -92,6 +92,7 @@ class vAPVDeviceDriverCommon(object):
             if cfg.CONF.lbaas_settings.https_offload is False:
                 raise Exception("HTTPS termination has been disabled by "
                                 "the administrator")
+
         elif old and old.protocol == "TERMINATED_HTTPS":
             self._clean_up_certificates(vapv, listener.id)
         # Modify Neutron security group to allow access to data port...
@@ -220,8 +221,6 @@ class vAPVDeviceDriverCommon(object):
             return
         # Create the TrafficScript(tm) rule
         ts_rule_name = "l7policy-{}".format(policy.id)
-        trafficscript = self._build_trafficscript(policy)
-        vapv.rule.create(ts_rule_name, rule_text=trafficscript)
         # Make sure the rules are in the correct order
         vserver = vapv.vserver.get(policy.listener_id)
         policies = vserver.request_rules
@@ -316,68 +315,17 @@ class vAPVDeviceDriverCommon(object):
             setting = getattr(global_section, param)
         return setting
 
-    def _get_custom_settings(self, tenant_id):
-        if self.customizations_db:
-            return self.customizations_db.get_all_tenant_customizations(
-                tenant_id
-            )
-        return None
-
-    def _codes_to_regex(self, status_codes):
-        return "({})".format("|".join(
-            [
-                code.strip() if "-" not in code else "|".join([
-                    str(range_code) for range_code in range(
-                        int(code.split("-")[0]), int(code.split("-")[1]) + 1
-                    )
-                ])
-                for code in status_codes.split(",")
-            ]
-        ))
-
-    def _build_trafficscript(self, policy):
-        key_map = {
-            "HOST_NAME": "http.getHostHeader()",
-            "PATH": "http.getPath()",
-            "HEADER": "http.getHeader('{}')",
-            "COOKIE": "http.getCookie('{}')",
-            "FILE_TYPE": "string.split(http.getPath(), '.')[-1]"
-        }
-        comp_map = {
-            "REGEX": "string.regexMatch({}, '{}')",
-            "STARTS_WITH": "string.startsWith({}, '{}')",
-            "ENDS_WITH": "string.endsWith({}, '{}')",
-            "CONTAINS": "string.contains({}, '{}')",
-            "EQUAL_TO": "({} == '{}')"
-        }
-        # Build a list of TrafficScript conditions from the rules
-        condition_list = []
-        for rule in policy.rules:
-            rule_key = key_map[rule.type]
-            if "'{}'" in rule_key:
-                rule_key = rule_key.format(rule.key)
-            condition = comp_map[rule.compare_type].format(rule_key, rule.value)
-            if rule.invert:
-                condition = "! {}".format(condition)
-            condition_list.append(condition)
-        # Select the TrafficScript action to take
-        action = ""
-        if policy.action == "REJECT":
-            action = "connection.drop();"
-        elif policy.action == "REDIRECT_TO_POOL":
-            action = "pool.use('{}');".format(policy.redirect_pool_id)
-        elif policy.action == "REDIRECT_TO_URL":
-            action = "http.redirect('{}');".format(policy.redirect_url)
-        # Generate TrafficScript
-        trafficscript = "if({})\n{{\n\t{}\n}}".format(
-            "\n|| ".join(condition_list),
-            action
-        )
-        return trafficscript
-
     def create_vapv(self, context, **model_kwargs):
         vapv = self.array_amphora_db.create(context.session, **model_kwargs);
         return vapv
+
+    def find_available_cluster_id(self, context, subnet_id):
+        cluster_ids = self.array_amphora_db.get_clusterids_by_subnet(context.session, subnet_id)
+        supported_ids = range(1, 256)
+        diff_ids=list(set(supported_ids).difference(set(cluster_ids)))
+        if len(diff_ids) > 1:
+            return diff_ids[0]
+        return 0
 
     def _get_container_id(self, container_ref):
         return container_ref[container_ref.rfind("/")+1:]

@@ -73,35 +73,45 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
                 ports = self._spawn_vapv(hostname, lb)
                 sleep(5)
         elif deployment_model == "PER_TENANT":
-            if not self.openstack_connector.vapv_exists(lb.tenant_id, hostname):
+            if not self.openstack_connector.vapv_exists(hostname):
                 ports = self._spawn_vapv(hostname, lb)
                 sleep(5)
             elif not self.openstack_connector.vapv_has_subnet_port(hostname,lb):
                 self._attach_subnet_port(hostname, lb)
 
+        sec_mgmt_ip = None
+        sec_data_port = None
         if ports:
             if type(hostname) is tuple:
-                pass #FIXME
+                mgmt_ip = ports[hostname[0]]['mgmt_ip']
+                sec_mgmt_ip = ports[hostname[1]]['mgmt_ip']
+                pri_data_port = ports[hostname[0]]['ports']['data']
+                sec_data_port = ports[hostname[1]]['ports']['data']
             else:
-                mgmt_port = ports['mgmt']
-                data_port = ports['data']
-                if mgmt_port:
-                    mgmt_ip = mgmt_port['fixed_ips'][0]['ip_address']
-                network_config['pri_data_ip'] = data_port['fixed_ips'][0]['ip_address']
-                network_config['pri_data_netmask'] = self.openstack_connector.get_subnet_netmask(lb.vip_subnet_id)
+                pri_mgmt_port = ports['mgmt']
+                pri_data_port = ports['data']
+                if pri_mgmt_port:
+                    mgmt_ip = pri_mgmt_port['fixed_ips'][0]['ip_address']
+
+            network_config['pri_data_ip'] = pri_data_port['fixed_ips'][0]['ip_address']
+            network_config['data_netmask'] = self.openstack_connector.get_subnet_netmask(lb.vip_subnet_id)
+            if sec_data_port:
+                network_config['sec_data_ip'] = sec_data_port['fixed_ips'][0]['ip_address']
         else:
             mgmt_ip = self.openstack_connector.get_mgmt_ip(hostname)
-            data_port = self.openstack_connector.get_server_ports(hostname)
 
         LOG.debug("hostname is: --%s--", hostname)
         if existed:
             self.array_amphora_db.increment_inuselb(context.session, hostname)
             vapv = self.array_amphora_db.get_vapv_by_hostname(context.session, hostname)
         else:
+            cluster_id = self.find_available_cluster_id(lb.vip_subnet_id)
             vapv = self.create_vapv(context, tenant_id=lb.tenant_id,
                 subnet_id=lb.vip_subnet_id,
                 pri_mgmt_address=mgmt_ip,
+                sec_mgmt_address=sec_mgmt_ip,
                 in_use_lb=1,
+                cluster_id=cluster_id,
                 hostname=hostname
             )
             self.array_vapv_driver.create_loadbalancer(lb, vapv, network_config)
@@ -133,7 +143,7 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
                 self.openstack_connector.add_ip_to_ports(
                     lb.vip_address, port_ids
                 )
-        # Update bandwidth allocation
+        # FIXME: Update bandwidth allocation
         #if old is not None and old.bandwidth != lb.bandwidth:
         #    self._update_instance_bandwidth(hostname, lb.bandwidth)
 
@@ -350,7 +360,6 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
                     hostname, lb.tenant_id
                 )
             )
-            
             return ports
         except Exception as e:
             self.openstack_connector.clean_up(

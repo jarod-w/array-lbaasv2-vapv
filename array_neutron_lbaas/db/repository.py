@@ -107,3 +107,7 @@ class ArrayAmphoraRepository(BaseRepository):
         if vapv:
             return vapv.in_use_lb
         return -1
+
+    def get_clusterids_by_subnet(self, session, subnet_id):
+        vapvs = session.query(self.model_class).filter_by(subnet_id=subnet_id)
+        return [vapv.cluster_id for vapv in vapvs]

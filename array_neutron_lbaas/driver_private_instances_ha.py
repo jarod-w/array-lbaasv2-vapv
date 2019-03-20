@@ -30,22 +30,6 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverPrivateInstances):
     """
 
     @logging_wrapper
-    def create_loadbalancer(self, context, lb):
-        """
-        Ensures a vAPV cluster is instantiated for the service.
-        If the deployment model is PER_LOADBALANCER, a new vAPV cluster
-        will always be spawned by this call.  If the deployemnt model is
-        PER_TENANT, a new cluster will only be spawned if one does not
-        already exist for the tenant.
-        """
-        super(ArrayDeviceDriverV2, self).create_loadbalancer(context, lb)
-        deployment_model = self._get_setting(
-            lb.tenant_id, "lbaas_settings", "deployment_model"
-        )
-        if deployment_model == "PER_LOADBALANCER":
-            self.update_loadbalancer(context, lb, None)
-
-    @logging_wrapper
     def update_loadbalancer(self, context, lb, old):
         """
         Creates or updates a TrafficIP group for the loadbalancer VIP address.
@@ -55,8 +39,6 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverPrivateInstances):
         """
         LOG.debug("\nupdate_loadbalancer({}): called".format(lb.id))
         hostnames = self._get_hostname(lb)
-        # Update the TrafficIP group
-        vapv = self._get_vapv(hostnames)
         # Update allowed_address_pairs
         if not old or lb.vip_address != old.vip_address:
             for hostname in hostnames:
@@ -66,9 +48,10 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverPrivateInstances):
                 self.openstack_connector.add_ip_to_ports(
                     lb.vip_address, port_ids
                 )
-        # Update bandwidth allocation
-        if old is not None and old.bandwidth != lb.bandwidth:
-            self._update_instance_bandwidth(hostnames, lb.bandwidth)
+        # FIXME: Update bandwidth allocation
+        #if old is not None and old.bandwidth != lb.bandwidth:
+        #    self._update_instance_bandwidth(hostnames, lb.bandwidth)
+
 
     @logging_wrapper
     def delete_loadbalancer(self, context, lb):
@@ -83,24 +66,25 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverPrivateInstances):
         deployment_model = self._get_setting(
             lb.tenant_id, "lbaas_settings", "deployment_model"
         )
+        deleted = False
         hostnames = self._get_hostname(lb)
         if deployment_model in ["PER_TENANT", "PER_SUBNET"]:
-            vapv = self._get_vapv(hostnames)
-            if not vapv.tip_group.list():
+            inuse = self.array_amphora_db.get_inuselb_by_hostname(context.session, hostnames[0])
+            if inuse < 2:
+                LOG.debug(
+                    "\ndelete_loadbalancer({}): "
+                    "last loadbalancer deleted; destroying vAPV".format(lb.id)
+                )
+                deleted = True
                 self._destroy_vapv(hostnames, lb)
-            elif deployment_model == "PER_TENANT":
-                # Delete subnet ports if no longer required
-                if self.openstack_connector.subnet_in_use(lb) is False:
-                    self._detach_subnet_port(vapv, hostnames, lb)
-                for hostname in hostnames:
-                    port_ids = self.openstack_connector.get_server_port_ids(
-                        hostname
-                    )
-                    self.openstack_connector.delete_ip_from_ports(
-                        lb.vip_address, port_ids
-                    )
         elif deployment_model == "PER_LOADBALANCER":
             self._destroy_vapv(hostnames, lb)
+
+        # update the db
+        if deleted:
+            self.array_amphora_db.delete(context.session, hostname=hostnames[0])
+        else:
+            self.array_amphora_db.decrement_inuselb(context.session, hostnames[0])
 
 ########
 # MISC #
@@ -112,30 +96,6 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverPrivateInstances):
             "vapv-{}-pri".format(identifier), "vapv-{}-sec".format(identifier)
         )
 
-    def _attach_subnet_port(self, vapv, hostnames, lb):
-        try:
-            for hostname in hostnames:
-                super(ArrayDeviceDriverV2, self)._attach_subnet_port(
-                    vapv, hostname, lb
-                )
-        except AttributeError:
-            for hostname in hostnames:
-                try:
-                    super(ArrayDeviceDriverV2, self)._detach_subnet_port(
-                        vapv, hostname, lb
-                    )
-                except:
-                    pass
-            raise Exception(
-                "Failed to add new port to vAPVs {} - one of the instances "
-                "may be down.".format(hostnames)
-            )
-
-    def _detach_subnet_port(self, vapv, hostnames, lb):
-        for hostname in hostnames:
-            super(ArrayDeviceDriverV2, self)._detach_subnet_port(
-                vapv, hostname, lb
-            )
 
     def _spawn_vapv(self, hostnames, lb):
         """
@@ -162,8 +122,7 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverPrivateInstances):
                         "data": port,
                         "mgmt": None
                     },
-                    "mgmt_ip": mgmt_ip,
-                    "cluster_ip": port['fixed_ips'][0]['ip_address']
+                    "mgmt_ip": mgmt_ip
                 }
                 port_ids.append(port['id'])
                 security_groups = [sec_grp]
@@ -177,8 +136,7 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverPrivateInstances):
                         "data": port,
                         "mgmt": None
                     },
-                    "mgmt_ip": mgmt_ip,
-                    "cluster_ip": port['fixed_ips'][0]['ip_address']
+                    "mgmt_ip": mgmt_ip
                 }
                 port_ids.append(port['id'])
             elif cfg.CONF.lbaas_settings.management_mode == "MGMT_NET":
@@ -195,8 +153,7 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverPrivateInstances):
                         "data": data_port,
                         "mgmt": mgmt_port
                     },
-                    "mgmt_ip": mgmt_ip,
-                    "cluster_ip": mgmt_ip
+                    "mgmt_ip": mgmt_ip
                 }
                 security_groups = [data_sec_grp, mgmt_sec_grp]
                 port_ids.append(data_port['id'])
@@ -215,8 +172,7 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverPrivateInstances):
                         "data": data_port,
                         "mgmt": mgmt_port
                     },
-                    "mgmt_ip": mgmt_ip,
-                    "cluster_ip": mgmt_ip
+                    "mgmt_ip": mgmt_ip
                 }
                 port_ids.append(data_port['id'])
                 port_ids.append(mgmt_port['id'])
@@ -240,7 +196,7 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverPrivateInstances):
                 # Set params for next iteration...
                 if cfg.CONF.lbaas_settings.allow_different_host_hint is True:
                     avoid = vm['id']
-
+            return ports
         except Exception as e:
             if cfg.CONF.lbaas_settings.roll_back_on_error is True:
                 self.openstack_connector.clean_up(
