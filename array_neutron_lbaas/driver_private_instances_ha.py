@@ -30,30 +30,6 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverPrivateInstances):
     """
 
     @logging_wrapper
-    def update_loadbalancer(self, context, lb, old):
-        """
-        Creates or updates a TrafficIP group for the loadbalancer VIP address.
-        The VIP is added to the allowed_address_pairs of the vAPV's
-        Neutron port to enable it to receive traffic to this address.
-        Can update the bandwidth allocation to the vAPV cluster members.
-        """
-        LOG.debug("\nupdate_loadbalancer({}): called".format(lb.id))
-        hostnames = self._get_hostname(lb)
-        # Update allowed_address_pairs
-        if not old or lb.vip_address != old.vip_address:
-            for hostname in hostnames:
-                port_ids = self.openstack_connector.get_server_port_ids(
-                    hostname
-                )
-                self.openstack_connector.add_ip_to_ports(
-                    lb.vip_address, port_ids
-                )
-        # FIXME: Update bandwidth allocation
-        #if old is not None and old.bandwidth != lb.bandwidth:
-        #    self._update_instance_bandwidth(hostnames, lb.bandwidth)
-
-
-    @logging_wrapper
     def delete_loadbalancer(self, context, lb):
         """
         Deletes the listen IP from a vAPV.

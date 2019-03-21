@@ -269,6 +269,21 @@ class ArrayAPVAPIDriver(object):
             self.run_cli_extend(base_rest_url, cmd_apv_no_hm)
 
 
+    def configure_cluster(self, cluster_id, priority):
+        # configure a virtual interface
+        cmd_config_virtual_interface = ADCDevice.cluster_config_virtual_interface(cluster_id)
+        # configure virtual vip
+        cmd_config_virtual_vip = ADCDevice.cluster_config_vip(cluster_id)
+        # configure virtual priority
+        cmd_config_virtual_priority = ADCDevice.cluster_config_priority(cluster_id, priority)
+        # enable cluster
+        cmd_enable_cluster = ADCDevice.cluster_enable(cluster_id)
+        for base_rest_url in self.base_rest_urls:
+            self.run_cli_extend(base_rest_url, cmd_config_virtual_interface)
+            self.run_cli_extend(base_rest_url, cmd_config_virtual_vip)
+            self.run_cli_extend(base_rest_url, cmd_config_virtual_priority)
+            self.run_cli_extend(base_rest_url, cmd_enable_cluster)
+
     def write_memory(self, argu):
         cmd_apv_write_memory = ADCDevice.write_memory()
         for base_rest_url in self.base_rest_urls:

@@ -32,13 +32,26 @@ class ArrayADCDriver(object):
         LOG.debug("Create a loadbalancer on Array ADC device(%s)", lb)
         argu = {}
 
-        if len(network_config) == 2:
+        if 'data_netmask' not in network_config.keys():
+            LOG.error("Exit because data_netmask is none")
+            return
+
+        if 'pri_data_ip' in network_config.keys():
             argu['vip_address'] = network_config['pri_data_ip']
             argu['netmask'] = network_config['data_netmask']
-
             management_ip = [vapv['pri_mgmt_address'],]
             driver = ArrayAPVAPIDriver(management_ip)
             driver.create_loadbalancer(argu)
+            driver.configure_cluster(vapv['cluster_id'], 100)
+            driver.write_memory(argu)
+
+        if 'sec_data_ip' in network_config.keys():
+            argu['vip_address'] = network_config['pri_data_ip']
+            argu['netmask'] = network_config['data_netmask']
+            management_ip = [vapv['sec_mgmt_address'],]
+            driver = ArrayAPVAPIDriver(management_ip)
+            driver.create_loadbalancer(argu)
+            driver.configure_cluster(vapv['cluster_id'], 99)
             driver.write_memory(argu)
 
 
@@ -51,7 +64,7 @@ class ArrayADCDriver(object):
         LOG.debug("Delete a loadbalancer on Array ADC device")
         argu = {}
 
-        management_ip = [vapv['pri_mgmt_address'],]
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.delete_loadbalancer(argu)
         driver.write_memory(argu)
@@ -71,7 +84,7 @@ class ArrayADCDriver(object):
         argu['vip_id'] = listener.loadbalancer_id
         argu['vip_address'] = lb.vip_address
 
-        management_ip = [vapv['pri_mgmt_address'],]
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.create_listener(argu)
         driver.write_memory(argu)
@@ -95,7 +108,7 @@ class ArrayADCDriver(object):
         argu['protocol'] = listener.protocol
         argu['vip_id'] = listener.loadbalancer_id
 
-        management_ip = [vapv['pri_mgmt_address'],]
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.delete_listener(argu)
         driver.write_memory(argu)
@@ -117,7 +130,7 @@ class ArrayADCDriver(object):
         argu['lb_algorithm'] = pool.lb_algorithm
         argu['vip_id'] = listener.loadbalancer_id
 
-        management_ip = [vapv['pri_mgmt_address'],]
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.create_pool(argu)
         driver.write_memory(argu)
@@ -164,7 +177,7 @@ class ArrayADCDriver(object):
         argu['lb_algorithm'] = pool.lb_algorithm
         argu['vip_id'] = pool.listener.loadbalancer_id
 
-        management_ip = [vapv['pri_mgmt_address'],]
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.delete_pool(argu)
         driver.write_memory(argu)
@@ -182,7 +195,7 @@ class ArrayADCDriver(object):
         argu['pool_id'] = pool.id
         argu['vip_id'] = lb.id
 
-        management_ip = [vapv['pri_mgmt_address'],]
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.create_member(argu)
         driver.write_memory(argu)
@@ -202,7 +215,7 @@ class ArrayADCDriver(object):
         argu['protocol'] = pool.protocol
         argu['vip_id'] = lb.id
 
-        management_ip = [vapv['pri_mgmt_address'],]
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.delete_member(argu)
         driver.write_memory(argu)
@@ -223,7 +236,7 @@ class ArrayADCDriver(object):
         argu['pool_id'] = pool.id
         argu['vip_id'] = lb.id
 
-        management_ip = [vapv['pri_mgmt_address'],]
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.create_health_monitor(argu)
         driver.write_memory(argu)
@@ -251,7 +264,7 @@ class ArrayADCDriver(object):
         argu['pool_id'] = pool.id
         argu['vip_id'] = lb.id
 
-        management_ip = [vapv['pri_mgmt_address'],]
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.delete_health_monitor(argu)
         driver.write_memory(argu)
