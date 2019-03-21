@@ -284,6 +284,24 @@ class ArrayAPVAPIDriver(object):
             self.run_cli_extend(base_rest_url, cmd_config_virtual_priority)
             self.run_cli_extend(base_rest_url, cmd_enable_cluster)
 
+
+    def configure_ssl(self, vhost_name, key_content, cert_content,
+            domain_name):
+        cmd_create_vhost = ADCDevice.create_ssl_vhost(vhost_name, vs_name)
+        cmd_import_ssl_key = ADCDevice.import_ssl_key(vhost_name, key_content, domain_name)
+        cmd_import_ssl_cert = ADCDevice.import_ssl_cert(vhost_name, cert_content, domain_name)
+        cmd_activate_cert = ADCDevice.activate_certificate(vhost_name, domain_name)
+        cmd_associate_domain_to_vhost = None
+        if domain_name:
+            cmd_associate_domain_to_vhost = ADCDevice.associate_domain_to_vhost(vhost_name, domain_name)
+        for base_rest_url in self.base_rest_urls:
+            self.run_cli_extend(base_rest_url, cmd_create_vhost)
+            self.run_cli_extend(base_rest_url, cmd_import_ssl_key)
+            self.run_cli_extend(base_rest_url, cmd_import_ssl_cert)
+            if cmd_associate_domain_to_vhost:
+                self.run_cli_extend(base_rest_url, cmd_associate_domain_to_vhost)
+            self.run_cli_extend(base_rest_url, cmd_activate_cert)
+
     def write_memory(self, argu):
         cmd_apv_write_memory = ADCDevice.write_memory()
         for base_rest_url in self.base_rest_urls:

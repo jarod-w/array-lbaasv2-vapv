@@ -108,7 +108,7 @@ class ADCDevice(object):
 
     @staticmethod
     def disassociate_domain_to_vhost(vhost_name, domain_name):
-        cmd = 'ssl sni %s %s' % (vhost_name, domain_name)
+        cmd = 'clear ssl sni %s %s' % (vhost_name, domain_name)
         return cmd
 
     @staticmethod
