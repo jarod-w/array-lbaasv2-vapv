@@ -172,8 +172,7 @@ question_chain = {
                  var_type=int, next_link="vapv_private_infra")
     ],
     "vapv_private_infra": [
-        Question("What is the Service Endpoint Address of your "
-                 "Services Director cluster?",
+        Question("What is the license server address of vAPV instances",
                  "lbaas_settings", "service_endpoint_address",
                  var_type=ip_address),
         Question("What is the Glance ID of the vAPV image to use?",
