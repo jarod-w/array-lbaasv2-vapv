@@ -172,7 +172,7 @@ question_chain = {
                  var_type=int, next_link="vapv_private_infra")
     ],
     "vapv_private_infra": [
-        Question("What is the license server address of vAPV instances",
+        Question("What is the license server address of vAPV instances?",
                  "lbaas_settings", "service_endpoint_address",
                  var_type=ip_address),
         Question("What is the Glance ID of the vAPV image to use?",
@@ -188,7 +188,7 @@ question_chain = {
                       "next_link": "vapv_private_flip"}])
     ],
     "vapv_private_mgmtnet": [
-        Question("What is the Neutron ID of the management subnet?",
+        Question("What is the Neutron ID of the management network?",
                  "lbaas_settings", "management_network",
                  next_link="vapv_private_sdsettings")
     ],
