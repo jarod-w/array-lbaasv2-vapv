@@ -105,6 +105,16 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
             self.array_amphora_db.increment_inuselb(context.session, hostname)
             vapv = self.array_amphora_db.get_vapv_by_hostname(context.session, hostname)
         else:
+            first_hostname = hostname
+            if type(hostname) is tuple:
+                for entry in hostname:
+                    port_ids = self.openstack_connector.get_server_port_ids(
+                        lb.tenant_id, entry
+                    )
+                    self.openstack_connector.add_ip_to_ports(
+                        lb.vip_address, port_ids
+                    )
+                first_hostname = hostname[0]
             cluster_id = self.find_available_cluster_id(lb.vip_subnet_id)
             vapv = self.create_vapv(context, tenant_id=lb.tenant_id,
                 subnet_id=lb.vip_subnet_id,
@@ -112,7 +122,7 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
                 sec_mgmt_address=sec_mgmt_ip,
                 in_use_lb=1,
                 cluster_id=cluster_id,
-                hostname=hostname
+                hostname=first_hostname
             )
             self.array_vapv_driver.create_loadbalancer(lb, vapv, network_config)
 
