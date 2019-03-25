@@ -55,7 +55,7 @@ class ArrayAPVAPIDriver(object):
 
         # delete vip
         self._delete_vip()
-
+        self.clear_cluster(argu['cluster_id'], argu['vip_address'])
 
     def create_listener(self, argu):
         """ create a listener """
@@ -269,11 +269,11 @@ class ArrayAPVAPIDriver(object):
             self.run_cli_extend(base_rest_url, cmd_apv_no_hm)
 
 
-    def configure_cluster(self, cluster_id, priority):
+    def configure_cluster(self, cluster_id, priority, vip_address):
         # configure a virtual interface
         cmd_config_virtual_interface = ADCDevice.cluster_config_virtual_interface(cluster_id)
         # configure virtual vip
-        cmd_config_virtual_vip = ADCDevice.cluster_config_vip(cluster_id)
+        cmd_config_virtual_vip = ADCDevice.cluster_config_vip(cluster_id, vip_address)
         # configure virtual priority
         cmd_config_virtual_priority = ADCDevice.cluster_config_priority(cluster_id, priority)
         # enable cluster
@@ -285,12 +285,21 @@ class ArrayAPVAPIDriver(object):
             self.run_cli_extend(base_rest_url, cmd_enable_cluster)
 
 
-    def configure_ssl(self, vhost_name, key_content, cert_content,
+    def clear_cluster(self, cluster_id, vip_address):
+        cmd_no_config_virtual_vip = ADCDevice.no_cluster_config_vip(cluster_id, vip_address)
+        cmd_no_config_virtual_priority = ADCDevice.no_cluster_config_priority(cluster_id)
+        for base_rest_url in self.base_rest_urls:
+            self.run_cli_extend(base_rest_url, cmd_no_config_virtual_vip)
+            self.run_cli_extend(base_rest_url, cmd_no_config_virtual_priority)
+
+
+    def configure_ssl(self, vhost_name, vs_name, key_content, cert_content,
             domain_name):
         cmd_create_vhost = ADCDevice.create_ssl_vhost(vhost_name, vs_name)
         cmd_import_ssl_key = ADCDevice.import_ssl_key(vhost_name, key_content, domain_name)
         cmd_import_ssl_cert = ADCDevice.import_ssl_cert(vhost_name, cert_content, domain_name)
         cmd_activate_cert = ADCDevice.activate_certificate(vhost_name, domain_name)
+        cmd_start_vhost = ADCDevice.start_vhost(vhost_name)
         cmd_associate_domain_to_vhost = None
         if domain_name:
             cmd_associate_domain_to_vhost = ADCDevice.associate_domain_to_vhost(vhost_name, domain_name)
@@ -301,8 +310,25 @@ class ArrayAPVAPIDriver(object):
             if cmd_associate_domain_to_vhost:
                 self.run_cli_extend(base_rest_url, cmd_associate_domain_to_vhost)
             self.run_cli_extend(base_rest_url, cmd_activate_cert)
+            self.run_cli_extend(base_rest_url, cmd_start_vhost)
 
-    def write_memory(self, argu):
+    def clear_ssl(self, vhost_name, vs_name, domain_name):
+        cmd_stop_vhost = ADCDevice.stop_vhost(vhost_name)
+        cmd_deactivate_certificate = ADCDevice.deactivate_certificate(vhost_name, domain_name)
+        if domain_name:
+            cmd_disassociate_domain_to_vhost = ADCDevice.disassociate_domain_to_vhost(vhost_name)
+        cmd_no_ssl_cert = ADCDevice.no_ssl_cert(vhost_name)
+        cmd_no_ssl_vhost = ADCDevice.no_ssl_vhost(vhost_name, vs_name)
+        for base_rest_url in self.base_rest_urls:
+            self.run_cli_extend(base_rest_url, cmd_stop_vhost)
+            self.run_cli_extend(base_rest_url, cmd_deactivate_certificate)
+            if domain_name:
+                self.run_cli_extend(base_rest_url, cmd_disassociate_domain_to_vhost)
+            self.run_cli_extend(base_rest_url, cmd_no_ssl_cert)
+            self.run_cli_extend(base_rest_url, cmd_no_ssl_vhost)
+
+
+    def write_memory(self, argu=None):
         cmd_apv_write_memory = ADCDevice.write_memory()
         for base_rest_url in self.base_rest_urls:
             self.run_cli_extend(base_rest_url, cmd_apv_write_memory)

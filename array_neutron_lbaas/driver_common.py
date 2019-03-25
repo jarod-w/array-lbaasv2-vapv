@@ -92,9 +92,6 @@ class vAPVDeviceDriverCommon(object):
             if cfg.CONF.lbaas_settings.https_offload is False:
                 raise Exception("HTTPS termination has been disabled by "
                                 "the administrator")
-
-        elif old and old.protocol == "TERMINATED_HTTPS":
-            self._clean_up_certificates(vapv, listener.id)
         # Modify Neutron security group to allow access to data port...
         if use_security_group:
             identifier = self.openstack_connector.get_identifier(lb)
@@ -114,11 +111,13 @@ class vAPVDeviceDriverCommon(object):
             self.array_vapv_driver.update_listener(lb, listener, old, vapv)
         else:
             self.array_vapv_driver.create_listener(lb, listener, vapv)
+            if listener.protocol == "TERMINATED_HTTPS":
+                self._config_ssl(vapv, listener)
 
     def delete_listener(self, context, listener, vapv, use_security_group=False):
         # Delete associated SSL certificates
         if listener.protocol == "TERMINATED_HTTPS":
-            self._clean_up_certificates(vapv, listener.id)
+            self._clean_up_certificates(vapv, listener)
         if use_security_group:
             # Delete security group rule for the listener port/protocol
             protocol = 'udp' if listener.protocol == "UDP" else 'tcp'
@@ -330,57 +329,24 @@ class vAPVDeviceDriverCommon(object):
     def _get_container_id(self, container_ref):
         return container_ref[container_ref.rfind("/")+1:]
 
-    def _get_ssl_config(self, vapv, listener):
-        container_id = self._get_container_id(
-            listener.default_tls_container_id
-        )
+    def _config_ssl(self, vapv, listener):
         # Upload default certificate
-        default_cert_name, cert = self._upload_certificate(
-            vapv, listener.id, listener.default_tls_container_id
+        self._upload_certificate(
+            vapv, listener, listener.default_tls_container_id, default=True
         )
-        # Set default certificate
-        ssl_settings = {
-            "server_cert_default": default_cert_name,
-            "server_cert_host_mapping": []
-        }
         # Configure SNI certificates
         if listener.sni_containers:
             for sni_container in listener.sni_containers:
-                container_id = self._get_container_id(
-                    sni_container.tls_container_id
-                 )
                 # Get cert from Barbican and upload to vAPV
-                cert_name, cert = self._upload_certificate(
-                    vapv, listener.id, sni_container.tls_container_id
+                self._upload_certificate(
+                    vapv, listener, sni_container.tls_container_id
                 )
-                # Get CN and subjectAltNames from certificate
-                cert_hostnames = get_host_names(cert.get_certificate())
-                # Add the CN and the certificate to the virtual server
-                # SNI certificate mapping table
-                ssl_settings['server_cert_host_mapping'].append(
-                    {
-                        "host": cert_hostnames['cn'],
-                        "certificate": cert_name
-                    }
-                )
-                # Add subjectAltNames to the mapping table if present
-                try:
-                    for alt_name in cert_hostnames['dns_names']:
-                        ssl_settings['server_cert_host_mapping'].append(
-                            {
-                                "host": alt_name,
-                                "certificate": cert_name
-                            }
-                        )
-                except TypeError:
-                    pass
-        return ssl_settings
 
-    def _upload_certificate(self, vapv, listener_id, container_id):
+    def _upload_certificate(self, vapv, listener, container_id, default = False):
         # Get the certificate from Barbican
         cert = self.certificate_manager.get_cert(
             container_id,
-            service_name="Neutron LBaaS v2 Brocade provider",
+            service_name="arrayapv provider",
             check_only=True
         )
         # Check that the private key is not passphrase-protected
@@ -394,19 +360,37 @@ class vAPVDeviceDriverCommon(object):
             cert_chain = cert.get_certificate() + cert.get_intermediates()
         except TypeError:
             cert_chain = cert.get_certificate()
-        # Upload the certificate and key to the vAPV
-        cert_name = "{}-{}".format(
-            listener_id, self._get_container_id(container_id)
-        )
-        vapv.ssl_server_cert.create(
-            cert_name, private=cert.get_private_key(), public=cert_chain
-        )
-        return cert_name, cert
+        domain_name = None
+        if not default:
+            cert_hostnames = get_host_names(cert.get_certificate())
+            domain_name = cert_hostnames['cn']
+        self.array_vapv_driver.upload_cert(vapv, listener, container_id,
+                cert.get_private_key(), cert_chain, domain_name)
 
-    def _clean_up_certificates(self, vapv, listener_id):
-        vs = vapv.vserver.get(listener_id)
-        # Delete default certificate
-        vapv.ssl_server_cert.delete(vs.ssl__server_cert_default)
-        # Delete SNI certificates
-        for sni_cert in vs.ssl__server_cert_host_mapping:
-            vapv.ssl_server_cert.delete(sni_cert['certificate'])
+    def _clean_up_certificates(self, vapv, listener):
+        # Upload default certificate
+        self._no_certificate(
+            vapv, listener, listener.default_tls_container_id, default=True
+        )
+        # Configure SNI certificates
+        if listener.sni_containers:
+            for sni_container in listener.sni_containers:
+                # Get cert from Barbican and upload to vAPV
+                self._no_certificate(
+                    vapv, listener, sni_container.tls_container_id
+                )
+
+    def _no_certificate(self, vapv, listener, container_id, default=False):
+        cert = self.certificate_manager.get_cert(
+            container_id,
+            service_name="arrayapv provider",
+            check_only=True
+        )
+        domain_name = None
+        if not default:
+            cert_hostnames = get_host_names(cert.get_certificate())
+            domain_name = cert_hostnames['cn']
+        self.array_vapv_driver.clear_cert(vapv, listener, container_id,
+                                         domain_name)
+
+

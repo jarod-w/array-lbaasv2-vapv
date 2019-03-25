@@ -94,11 +94,27 @@ class ADCDevice(object):
         return cmd
 
     @staticmethod
+    def no_ssl_cert(vhost_name, domain_name=None):
+        if domain_name:
+            cmd = "no ssl certificate %s 1 %s" % (vhost_name, domain_name)
+        else:
+            cmd = "no ssl certificate %s 1 ''" % (vhost_name)
+        return cmd
+
+    @staticmethod
     def activate_certificate(vhost_name, domain_name=None):
         if domain_name:
             cmd = "ssl activate certificate %s 1 %s" % (vhost_name, domain_name)
         else:
             cmd = "ssl activate certificate %s" % (vhost_name)
+        return cmd
+
+    @staticmethod
+    def deactivate_certificate(vhost_name, domain_name=None):
+        if domain_name:
+            cmd = "ssl deactivate certificate %s %s all" % (vhost_name, domain_name)
+        else:
+            cmd = "ssl deactivate certificate %s '' all" % (vhost_name)
         return cmd
 
     @staticmethod
@@ -264,8 +280,18 @@ class ADCDevice(object):
         return cmd
 
     @staticmethod
+    def no_cluster_config_vip(cluster_id, vip_address):
+        cmd = "no cluster virtual vip port2 %d %s" % (cluster_id, vip_address)
+        return cmd
+
+    @staticmethod
     def cluster_config_priority(cluster_id, priority):
         cmd = "cluster virtual priority port2 %d %s" % (cluster_id, priority)
+        return cmd
+
+    @staticmethod
+    def no_cluster_config_priority(cluster_id):
+        cmd = "no cluster virtual priority port2 %d" % (cluster_id)
         return cmd
 
     @staticmethod

@@ -42,7 +42,7 @@ class ArrayADCDriver(object):
             management_ip = [vapv['pri_mgmt_address'],]
             driver = ArrayAPVAPIDriver(management_ip)
             driver.create_loadbalancer(argu)
-            driver.configure_cluster(vapv['cluster_id'], 100)
+            driver.configure_cluster(vapv['cluster_id'], 100, lb.vip_address)
             driver.write_memory(argu)
 
         if 'sec_data_ip' in network_config.keys():
@@ -51,7 +51,7 @@ class ArrayADCDriver(object):
             management_ip = [vapv['sec_mgmt_address'],]
             driver = ArrayAPVAPIDriver(management_ip)
             driver.create_loadbalancer(argu)
-            driver.configure_cluster(vapv['cluster_id'], 99)
+            driver.configure_cluster(vapv['cluster_id'], 99, lb.vip_address)
             driver.write_memory(argu)
 
 
@@ -60,11 +60,13 @@ class ArrayADCDriver(object):
         LOG.debug("Nothing to do at LB updating")
 
 
-    def delete_loadbalancer(self, vapv):
+    def delete_loadbalancer(self, lb, vapv):
         LOG.debug("Delete a loadbalancer on Array ADC device")
         argu = {}
 
         management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
+        argu['vip_address'] = lb.vip_address
+        argu['cluster_id'] = vapv.cluster_id
         driver = ArrayAPVAPIDriver(management_ip)
         driver.delete_loadbalancer(argu)
         driver.write_memory(argu)
@@ -89,6 +91,18 @@ class ArrayADCDriver(object):
         driver.create_listener(argu)
         driver.write_memory(argu)
 
+    def upload_cert(self, vapv, listener, vhost_id, key, cert, domain_name):
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
+        driver = ArrayAPVAPIDriver(management_ip)
+        driver.configure_ssl(vhost_id, listener.id, key, cert, domain_name)
+        driver.write_memory()
+
+
+    def clear_cert(self, vapv, listener, vhost_id, domain_name):
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
+        driver = ArrayAPVAPIDriver(management_ip)
+        driver.clear_ssl(vhost_id, listener.id, domain_name)
+        driver.write_memory()
 
     def update_listener(self, lb, listener, old, vapv):
         # see: https://wiki.openstack.org/wiki/Neutron/LBaaS/API_2.0#Update_a_Listener
