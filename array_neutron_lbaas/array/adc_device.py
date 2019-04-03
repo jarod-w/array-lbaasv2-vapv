@@ -11,8 +11,27 @@
 # limitations under the License.
 #
 
+from neutron_lbaas.services.loadbalancer import constants as lb_const
+
 from array_neutron_lbaas.array.adc_map import service_group_lb_method
 from array_neutron_lbaas.array.adc_map import array_protocol_map
+
+def parse_dest_url(dest_url):
+    dest_prot = 'http'
+    if dest_url.startswith('https'):
+        dest_prot = 'https'
+
+    if dest_url.startswith('http'):
+        hostidx = dest_url.find('//') + 2
+        dest_str = dest_url[hostidx:]
+        while dest_str.startswith('/'):
+            dest_str = dest_str[1:]
+    else:
+        dest_str = dest_url
+    hostidx = dest_str.find('/')
+    host = dest_str[:hostidx]
+    path = dest_str[hostidx:]
+    return (dest_prot, host, path)
 
 class ADCDevice(object):
     """
@@ -305,10 +324,91 @@ class ADCDevice(object):
         return cmd
 
     @staticmethod
-    def create_l7_policy(policy_id, rule_id):
-        cmd = "write memory"
+    def create_http_error_page():
+        #FIXME
+        cmd = "http import error 456 default http://10.8.1.23/xx.html"
         return cmd
 
+    @staticmethod
+    def load_http_error_page():
+        cmd = "http error 456 default"
+        return cmd
+
+    @staticmethod
+    def redirect_to_url(vs_name, policy_name, dest_url):
+        (proto, host, path) = parse_dest_url(dest_url)
+        cmd = "http redirect url %s %s 1 '<regex>*' '<regex>*' %s %s %s 302" % \
+                (vs_name, policy_name, proto, host, path)
+        return cmd
+
+    @staticmethod
+    def create_l7_rule(rule_id, vs_id, group_id, rule_type, compare_type,
+            value, key=None):
+        cmd = ""
+        v_str = ""
+        if rule_type == lb_const.L7_RULE_TYPE_HOST_NAME:
+            cmd = "slb policy qos hostname"
+        elif rule_type == lb_const.L7_RULE_TYPE_HEADER:
+            cmd = "slb policy header"
+        elif rule_type == lb_const.L7_RULE_TYPE_COOKIE:
+            cmd = "slb policy qos cookie"
+        elif rule_type == lb_const.L7_RULE_TYPE_PATH or \
+             rule_type == lb_const.L7_RULE_TYPE_FILE_TYPE:
+            cmd = "slb policy qos url"
+
+        if compare_type == lb_const.L7_RULE_COMPARE_TYPE_REGEX:
+            v_str = "<regex>%s" % value
+            if key:
+                v_key = "<regex>%s" % key
+        elif compare_type == lb_const.L7_RULE_COMPARE_TYPE_STARTS_WITH:
+            v_str = "^%s" % value
+            if key:
+                v_key = "^%s" % key
+        elif compare_type == lb_const.L7_RULE_COMPARE_TYPE_ENDS_WITH:
+            v_str = "%s$" % value
+            if key:
+                v_key = "%s$" % key
+        elif compare_type == lb_const.L7_RULE_COMPARE_TYPE_EQUAL_TO:
+            v_str = "^%s$" % value
+            if key:
+                v_key = "^%s$" % key
+        elif compare_type == lb_const.L7_RULE_COMPARE_TYPE_CONTAINS:
+            v_str = value
+            if key:
+                v_key = key
+
+        if rule_type == lb_const.L7_RULE_TYPE_COOKIE:
+            v_str = "%s=%s" % (v_key, value)
+        elif rule_type == lb_const.L7_RULE_TYPE_FILE_TYPE:
+            v_str = "\.%s$" % value
+
+        cmd += "%s %s %s %s" % (rule_id, vs_id, group_id, v_str)
+        return cmd
+
+    @staticmethod
+    def no_l7_rule(rule_id, rule_type):
+        cmd = ""
+        if rule_type == lb_const.L7_RULE_TYPE_HOST_NAME:
+            cmd = "no slb policy qos hostname"
+        elif rule_type == lb_const.L7_RULE_TYPE_HEADER:
+            cmd = "no slb policy header"
+        elif rule_type == lb_const.L7_RULE_TYPE_COOKIE:
+            cmd = "no slb policy qos cookie"
+        elif rule_type == lb_const.L7_RULE_TYPE_PATH or \
+             rule_type == lb_const.L7_RULE_TYPE_FILE_TYPE:
+            cmd = "no slb policy qos url"
+        cmd += " %s" % rule_id
+        return cmd
+
+    @staticmethod
+    def create_vlink(vlink_name):
+        cmd = "slb vlink %s" % vlink_name
+        return cmd
+
+    @staticmethod
+    def no_vlink(vlink_name):
+        cmd = "no slb vlink %s" % vlink_name
+        return cmd
 
     @staticmethod
     def write_memory():

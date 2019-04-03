@@ -283,3 +283,29 @@ class ArrayADCDriver(object):
         driver.delete_health_monitor(argu)
         driver.write_memory(argu)
 
+
+    def create_l7_policy(self, policy, vapv):
+        pass
+
+
+    def update_l7_policy(self, policy, old, vapv):
+        pass
+
+
+    def delete_l7_policy(self, policy, vapv):
+        pass
+
+
+    def create_l7_rule(self, rule, vapv):
+        argu = {}
+
+        policy = rule.policy
+        pass
+
+
+    def update_l7_rule(self, rule, old, vapv):
+        pass
+
+
+    def delete_l7_rule(self, rule, vapv):
+        pass

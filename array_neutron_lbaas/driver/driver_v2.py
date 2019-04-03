@@ -30,8 +30,9 @@ class ArrayLoadBalancerDriver(driver_base.LoadBalancerBaseDriver):
         self.pool = ArrayPoolManager(self)
         self.member = ArrayMemberManager(self)
         self.health_monitor = ArrayHealthMonitorManager(self)
+        self.l7policy = ArrayL7PolicyManager(self)
+        self.l7rule = ArrayL7RuleManager(self)
         self.device_driver = device_driver.ArrayDeviceDriverV2(plugin)
-
 
 class ArrayLoadBalancerManager(driver_base.BaseLoadBalancerManager):
     def create(self, context, obj):
@@ -42,7 +43,7 @@ class ArrayLoadBalancerManager(driver_base.BaseLoadBalancerManager):
         try:
             self.driver.device_driver.create_loadbalancer(context, obj)
             self.successful_completion(context, obj)
-        except Exception as e:
+        except Exception:
             LOG.debug("trace is below: %s", traceback.format_exc())
             self.failed_completion(context, obj)
 
@@ -50,7 +51,7 @@ class ArrayLoadBalancerManager(driver_base.BaseLoadBalancerManager):
         try:
             self.driver.device_driver.update_loadbalancer(context, obj, old_obj)
             self.successful_completion(context, obj)
-        except Exception as e:
+        except Exception:
             self.failed_completion(context, obj)
 
     def delete(self, context, obj):
@@ -161,6 +162,52 @@ class ArrayHealthMonitorManager(driver_base.BaseHealthMonitorManager):
     def delete(self, context, obj):
         try:
             self.driver.device_driver.delete_healthmonitor(context, obj)
+        except Exception:
+            pass
+        self.successful_completion(context, obj, delete=True)
+
+
+class ArrayL7PolicyManager(driver_base.BaseL7PolicyManager):
+    def create(self, context, obj):
+        try:
+            self.driver.device_driver.create_l7_policy(obj)
+            self.successful_completion(context, obj)
+        except Exception:
+            self.failed_completion(context, obj)
+
+    def update(self, context, old_obj, obj):
+        try:
+            self.driver.device_driver.update_l7_policy(obj, old_obj)
+            self.successful_completion(context, obj)
+        except Exception:
+            self.failed_completion(context, obj)
+
+    def delete(self, context, obj):
+        try:
+            self.driver.device_driver.delete_l7_policy(obj)
+        except Exception:
+            pass
+        self.successful_completion(context, obj, delete=True)
+
+
+class ArrayL7RuleManager(driver_base.BaseL7RuleManager):
+    def create(self, context, obj):
+        try:
+            self.driver.device_driver.create_l7_rule(obj)
+            self.successful_completion(context, obj)
+        except Exception:
+            self.failed_completion(context, obj)
+
+    def update(self, context, old_obj, obj):
+        try:
+            self.driver.device_driver.update_l7_rule(obj, old_obj)
+            self.successful_completion(context, obj)
+        except Exception:
+            self.failed_completion(context, obj)
+
+    def delete(self, context, obj):
+        try:
+            self.driver.device_driver.delete_l7_rule(obj)
         except Exception:
             pass
         self.successful_completion(context, obj, delete=True)

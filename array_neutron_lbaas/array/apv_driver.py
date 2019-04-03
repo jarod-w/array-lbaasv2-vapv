@@ -269,6 +269,22 @@ class ArrayAPVAPIDriver(object):
             self.run_cli_extend(base_rest_url, cmd_apv_no_hm)
 
 
+    def create_l7_policy(self, argu):
+        pass
+
+
+    def delete_l7_policy(self, argu):
+        pass
+
+
+    def create_l7_rule(self, argu):
+        pass
+
+
+    def delete_l7_rule(self, argu):
+        pass
+
+
     def configure_cluster(self, cluster_id, priority, vip_address):
         # configure a virtual interface
         cmd_config_virtual_interface = ADCDevice.cluster_config_virtual_interface(cluster_id)
