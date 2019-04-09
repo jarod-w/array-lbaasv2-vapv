@@ -81,7 +81,7 @@ class OpenStackInterface(object):
         else:
             self.customizations_db = None
 
-    def create_vapv(self, hostname, lb, ports, cluster=None, avoid=None):
+    def create_vapv(self, hostname, lb, ports, avoid=None):
         """
         Creates a vAPV instance as a Nova VM.
         """
@@ -265,12 +265,12 @@ class OpenStackInterface(object):
             if security_group is None:
                 if mgmt_port is False:
                     sec_grp = self.create_lb_security_group(
-                        lb.tenant_id, identifier
+                        lb.tenant_id, identifier, cluster=cluster
                     )
                 else:
                     sec_grp = self.create_lb_security_group(
                         lb.tenant_id, identifier, mgmt_port=True,
-                        mgmt_label=True, cluster=cluster
+                        mgmt_label=True
                     )
                 security_group = sec_grp['security_group']['id']
             if mgmt_port is False:
@@ -352,17 +352,12 @@ class OpenStackInterface(object):
             sec_grp['security_group']['id'],
             protocol="icmp"
         )
-        if mgmt_port is True:
-            LOG.debug("admin_port: %s", cfg.CONF.vapv_settings.admin_port)
+        if mgmt_port:
+            LOG.debug("create rule for mgmt_port(%s)", sec_grp_data['security_group']['name'])
             self.create_security_group_rule(
                 sec_grp['security_group']['id'],
                 port=cfg.CONF.vapv_settings.admin_port
             )
-        # If mgmt_port, add the necessary rules to allow management traffic
-        # i.e. allow each Services Director to access the REST port of the
-        # instance and allw SNMP access if enabled.
-        if mgmt_port:
-            LOG.debug("rest_port: %s", cfg.CONF.vapv_settings.rest_port)
             self.create_security_group_rule(
                 sec_grp['security_group']['id'],
                 port=cfg.CONF.vapv_settings.rest_port,
@@ -372,34 +367,11 @@ class OpenStackInterface(object):
                 sec_grp['security_group']['id'],
                 port=22
             )
-        # If cluster, add necessary ports for intra-cluster comms
-        if cluster is True:
+        if cluster:
+            LOG.debug("create rule for data_port(%s)", sec_grp_data['security_group']['name'])
             self.create_security_group_rule(
                 sec_grp['security_group']['id'],
-                port=cfg.CONF.vapv_settings.admin_port,
-                remote_group=sec_grp['security_group']['id']
-            )
-            self.create_security_group_rule(
-                sec_grp['security_group']['id'],
-                port=cfg.CONF.vapv_settings.admin_port,
-                remote_group=sec_grp['security_group']['id'],
-                protocol='udp'
-            )
-            self.create_security_group_rule(
-                sec_grp['security_group']['id'],
-                port=cfg.CONF.vapv_settings.cluster_port,
-                remote_group=sec_grp['security_group']['id']
-            )
-            self.create_security_group_rule(
-                sec_grp['security_group']['id'],
-                port=cfg.CONF.vapv_settings.cluster_port,
-                remote_group=sec_grp['security_group']['id'],
-                protocol='udp'
-            )
-            self.create_security_group_rule(
-                sec_grp['security_group']['id'],
-                port=cfg.CONF.vapv_settings.rest_port,
-                remote_group=sec_grp['security_group']['id']
+                protocol='112'
             )
         return sec_grp
 
@@ -431,7 +403,6 @@ class OpenStackInterface(object):
         if remote_group:
             new_rule['security_group_rule']['remote_group_id'] = remote_group
         try:
-            LOG.debug("will create sg rule: --%s--", new_rule)
             neutron.create_security_group_rule(new_rule)
         except Exception as e:
             if not e.message.startswith("Security group rule already exists"):

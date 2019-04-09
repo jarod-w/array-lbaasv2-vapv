@@ -50,10 +50,12 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
         vapv = None
         ports = None
         existed = True
+        sec_mgmt_ip = None
+        sec_data_port = None
         network_config = {}
         hostname = self._get_hostname(lb)
 
-        LOG.debug("enter create_loadbalancer: ", deployment_model)
+        LOG.debug("---enter create_loadbalancer---")
         if deployment_model == "PER_LOADBALANCER":
             ports = self._spawn_vapv(hostname, lb)
         elif deployment_model == "PER_SUBNET":
@@ -62,6 +64,7 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
             count = 0
             if self.openstack_connector.subnet_in_use(lb):
                 while not self.openstack_connector.vapv_exists(hostname):
+                    LOG.debug("Loop to lookup whether the vapv(%s) exists", hostname)
                     count += 1
                     sleep(5)
                     if count > 5:
@@ -79,8 +82,6 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
             elif not self.openstack_connector.vapv_has_subnet_port(hostname,lb):
                 self._attach_subnet_port(hostname, lb)
 
-        sec_mgmt_ip = None
-        sec_data_port = None
         if ports:
             if type(hostname) is tuple:
                 mgmt_ip = ports[hostname[0]]['mgmt_ip']
@@ -97,25 +98,22 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
             network_config['data_netmask'] = self.openstack_connector.get_subnet_netmask(lb.vip_subnet_id)
             if sec_data_port:
                 network_config['sec_data_ip'] = sec_data_port['fixed_ips'][0]['ip_address']
-        else:
-            mgmt_ip = self.openstack_connector.get_mgmt_ip(hostname)
 
         LOG.debug("hostname is: --%s--", hostname)
         if existed:
-            self.array_amphora_db.increment_inuselb(context.session, hostname)
-            vapv = self.array_amphora_db.get_vapv_by_hostname(context.session, hostname)
+            hostname_str = hostname[0] if isinstance(hostname, tuple) else hostname
+            self.array_amphora_db.increment_inuselb(context.session, hostname_str)
+            vapv = self.array_amphora_db.get_vapv_by_hostname(context.session, hostname_str)
         else:
             first_hostname = hostname
             if type(hostname) is tuple:
                 for entry in hostname:
-                    port_ids = self.openstack_connector.get_server_port_ids(
-                        lb.tenant_id, entry
-                    )
+                    port_ids = self.openstack_connector.get_server_port_ids(entry)
                     self.openstack_connector.add_ip_to_ports(
                         lb.vip_address, port_ids
                     )
                 first_hostname = hostname[0]
-            cluster_id = self.find_available_cluster_id(lb.vip_subnet_id)
+            cluster_id = self.find_available_cluster_id(context, lb.vip_subnet_id)
             vapv = self.create_vapv(context, tenant_id=lb.tenant_id,
                 subnet_id=lb.vip_subnet_id,
                 pri_mgmt_address=mgmt_ip,
@@ -219,7 +217,7 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
 
     @logging_wrapper
     def delete_pool(self, context, pool):
-        hostname = self._get_hostname(pool.listener.loadbalancer)
+        hostname = self._get_hostname(pool.root_loadbalancer)
         vapv = self._get_vapv(context, hostname)
         self.array_vapv_driver.delete_pool(pool, vapv)
 
@@ -317,7 +315,6 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
         port_ids = []
         security_groups = []
         vms = []
-        data_ip = None
         mgmt_ip = None
         # Create ports...
         try: # For rolling back objects if an error occurs
@@ -330,7 +327,7 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
                 port_ids.append(port['id'])
                 security_groups = [sec_grp]
             elif cfg.CONF.lbaas_settings.management_mode == "MGMT_NET":
-                data_port, sec_grp, data_ip = self.openstack_connector.create_port(
+                data_port, sec_grp, _ = self.openstack_connector.create_port(
                     lb, hostname, identifier=identifier
                 )
                 (mgmt_port, mgmt_sec_grp, mgmt_ip) = self.openstack_connector.create_port(

@@ -70,6 +70,14 @@ class ArrayAPVAPIDriver(object):
                         argu['connection_limit']
                        )
 
+        if argu['pool_id']:
+            self._create_policy(argu['pool_id'],
+                                argu['listener_id'],
+                                argu['session_persistence_type'],
+                                argu['lb_algorithm'],
+                                argu['cookie_name']
+                               )
+
 
     def delete_listener(self, argu):
         """ Delete VIP in lb_delete_vip """
@@ -78,10 +86,14 @@ class ArrayAPVAPIDriver(object):
             LOG.error("In delete_listener, it should not pass the None.")
 
         # delete vs
-        self._delete_vs(
-                       argu['listener_id'],
-                       argu['protocol']
-                       )
+        self._delete_vs(argu['listener_id'], argu['protocol'])
+
+        if argu['pool_id']:
+            self._delete_policy(
+                               argu['listener_id'],
+                               argu['session_persistence_type'],
+                               argu['lb_algorithm']
+                               )
 
 
     def _create_vip(self, vip_address, netmask):
@@ -168,17 +180,21 @@ class ArrayAPVAPIDriver(object):
         if not argu:
             LOG.error("In create_pool, it should not pass the None.")
 
-        cmd_apv_create_group = ADCDevice.create_group(argu['pool_id'], argu['lb_algorithm'], argu['session_persistence_type'])
+        cmd_apv_create_group = ADCDevice.create_group(argu['pool_id'],
+                                                      argu['lb_algorithm'],
+                                                      argu['session_persistence_type']
+                                                     )
         for base_rest_url in self.base_rest_urls:
             self.run_cli_extend(base_rest_url, cmd_apv_create_group)
 
         # create policy
-        self._create_policy(argu['pool_id'],
-                            argu['listener_id'],
-                            argu['session_persistence_type'],
-                            argu['lb_algorithm'],
-                            argu['cookie_name']
-                           )
+        if argu['listener_id']:
+            self._create_policy(argu['pool_id'],
+                                argu['listener_id'],
+                                argu['session_persistence_type'],
+                                argu['lb_algorithm'],
+                                argu['cookie_name']
+                               )
 
 
     def delete_pool(self, argu):
@@ -188,11 +204,12 @@ class ArrayAPVAPIDriver(object):
             LOG.error("In delete_pool, it should not pass the None.")
 
         # delete policy
-        self._delete_policy(
-                           argu['listener_id'],
-                           argu['session_persistence_type'],
-                           argu['lb_algorithm']
-                           )
+        if argu['listener_id']:
+            self._delete_policy(
+                               argu['listener_id'],
+                               argu['session_persistence_type'],
+                               argu['lb_algorithm']
+                               )
 
         cmd_apv_no_group = ADCDevice.no_group(argu['pool_id'])
         for base_rest_url in self.base_rest_urls:

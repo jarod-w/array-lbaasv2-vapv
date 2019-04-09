@@ -46,7 +46,7 @@ class ArrayADCDriver(object):
             driver.write_memory(argu)
 
         if 'sec_data_ip' in network_config.keys():
-            argu['vip_address'] = network_config['pri_data_ip']
+            argu['vip_address'] = network_config['sec_data_ip']
             argu['netmask'] = network_config['data_netmask']
             management_ip = [vapv['sec_mgmt_address'],]
             driver = ArrayAPVAPIDriver(management_ip)
@@ -86,6 +86,20 @@ class ArrayADCDriver(object):
         argu['vip_id'] = listener.loadbalancer_id
         argu['vip_address'] = lb.vip_address
 
+        pool = listener.default_pool
+        if pool:
+            sp_type = None
+            ck_name = None
+            argu['pool_id'] = pool.id
+            if pool.session_persistence:
+                sp_type = pool.session_persistence.type
+                ck_name = pool.session_persistence.cookie_name
+            argu['lb_algorithm'] = pool.lb_algorithm
+            argu['session_persistence_type'] = sp_type
+            argu['cookie_name'] = ck_name
+        else:
+            argu['pool_id'] = None
+
         management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.create_listener(argu)
@@ -122,6 +136,18 @@ class ArrayADCDriver(object):
         argu['protocol'] = listener.protocol
         argu['vip_id'] = listener.loadbalancer_id
 
+        pool = listener.default_pool
+        if pool:
+            sp_type = None
+            ck_name = None
+            argu['pool_id'] = pool.id
+            if pool.session_persistence:
+                sp_type = pool.session_persistence.type
+            argu['lb_algorithm'] = pool.lb_algorithm
+            argu['session_persistence_type'] = sp_type
+        else:
+            argu['pool_id'] = None
+
         management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.delete_listener(argu)
@@ -137,12 +163,15 @@ class ArrayADCDriver(object):
         if pool.session_persistence:
             sp_type = pool.session_persistence.type
             ck_name = pool.session_persistence.cookie_name
+        if listener:
+            argu['listener_id'] = listener.id
+        else:
+            argu['listener_id'] = None
         argu['pool_id'] = pool.id
-        argu['listener_id'] = listener.id
         argu['session_persistence_type'] = sp_type
         argu['cookie_name'] = ck_name
         argu['lb_algorithm'] = pool.lb_algorithm
-        argu['vip_id'] = listener.loadbalancer_id
+        argu['vip_id'] = pool.root_loadbalancer.id
 
         management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
@@ -184,12 +213,15 @@ class ArrayADCDriver(object):
             sp_type = pool.session_persistence.type
             ck_name = pool.session_persistence.cookie_name
 
+        if pool.listener:
+            argu['listener_id'] = pool.listener.id
+        else:
+            argu['listener_id'] = None
         argu['pool_id'] = pool.id
-        argu['listener_id'] = pool.listener.id
         argu['session_persistence_type'] = sp_type
         argu['cookie_name'] = ck_name
         argu['lb_algorithm'] = pool.lb_algorithm
-        argu['vip_id'] = pool.listener.loadbalancer_id
+        argu['vip_id'] = pool.root_loadbalancer.id
 
         management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)

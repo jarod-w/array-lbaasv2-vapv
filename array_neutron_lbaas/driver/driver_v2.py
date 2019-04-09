@@ -41,6 +41,7 @@ class ArrayLoadBalancerManager(driver_base.BaseLoadBalancerManager):
 
     def _create(self, context, obj):
         try:
+            LOG.debug("enter plugin driver for create_loadbalancer.")
             self.driver.device_driver.create_loadbalancer(context, obj)
             self.successful_completion(context, obj)
         except Exception:
@@ -49,15 +50,19 @@ class ArrayLoadBalancerManager(driver_base.BaseLoadBalancerManager):
 
     def update(self, context, old_obj, obj):
         try:
+            LOG.debug("enter plugin driver for update_loadbalancer.")
             self.driver.device_driver.update_loadbalancer(context, obj, old_obj)
             self.successful_completion(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             self.failed_completion(context, obj)
 
     def delete(self, context, obj):
         try:
+            LOG.debug("enter plugin driver for delete_loadbalancer.")
             self.driver.device_driver.delete_loadbalancer(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             pass
         self.successful_completion(context, obj, delete=True)
 
@@ -71,22 +76,28 @@ class ArrayLoadBalancerManager(driver_base.BaseLoadBalancerManager):
 class ArrayListenerManager(driver_base.BaseListenerManager):
     def create(self, context, obj):
         try:
+            LOG.debug("enter plugin driver for create_listener.")
             self.driver.device_driver.create_listener(context, obj)
             self.successful_completion(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             self.failed_completion(context, obj)
 
     def update(self, context, old_obj, obj):
         try:
+            LOG.debug("enter plugin driver for update_listener.")
             self.driver.device_driver.update_listener(context, obj, old_obj)
             self.successful_completion(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             self.failed_completion(context, obj)
 
     def delete(self, context, obj):
         try:
+            LOG.debug("enter plugin driver for delete_listener.")
             self.driver.device_driver.delete_listener(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             pass
         self.successful_completion(context, obj, delete=True)
 
@@ -94,22 +105,28 @@ class ArrayListenerManager(driver_base.BaseListenerManager):
 class ArrayPoolManager(driver_base.BasePoolManager):
     def create(self, context, obj):
         try:
+            LOG.debug("enter plugin driver for create_listener.")
             self.driver.device_driver.create_pool(context, obj)
             self.successful_completion(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             self.failed_completion(context, obj)
 
     def update(self, context, old_obj, obj):
         try:
+            LOG.debug("enter plugin driver for update_listener.")
             self.driver.device_driver.update_pool(context, obj, old_obj)
             self.successful_completion(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             self.failed_completion(context, obj)
 
     def delete(self, context, obj):
         try:
+            LOG.debug("enter plugin driver for delete_listener.")
             self.driver.device_driver.delete_pool(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             pass
         self.successful_completion(context, obj, delete=True)
 
@@ -117,22 +134,28 @@ class ArrayPoolManager(driver_base.BasePoolManager):
 class ArrayMemberManager(driver_base.BaseMemberManager):
     def create(self, context, obj):
         try:
+            LOG.debug("enter plugin driver for create_member.")
             self.driver.device_driver.create_member(context, obj)
             self.successful_completion(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             self.failed_completion(context, obj)
 
     def update(self, context, old_obj, obj):
         try:
+            LOG.debug("enter plugin driver for update_member.")
             self.driver.device_driver.update_member(context, obj, old_obj)
             self.successful_completion(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             self.failed_completion(context, obj)
 
     def delete(self, context, obj):
         try:
+            LOG.debug("enter plugin driver for delete_member.")
             self.driver.device_driver.delete_member(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             pass
         self.successful_completion(context, obj, delete=True)
 
@@ -140,6 +163,7 @@ class ArrayMemberManager(driver_base.BaseMemberManager):
         try:
             status = self.driver.device_driver.get_member_health(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             status = "UNKNOWN"
         return status
 
@@ -147,22 +171,28 @@ class ArrayMemberManager(driver_base.BaseMemberManager):
 class ArrayHealthMonitorManager(driver_base.BaseHealthMonitorManager):
     def create(self, context, obj):
         try:
+            LOG.debug("enter plugin driver for create_health_member.")
             self.driver.device_driver.create_healthmonitor(context, obj)
             self.successful_completion(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             self.failed_completion(context, obj)
 
     def update(self, context, old_obj, obj):
         try:
+            LOG.debug("enter plugin driver for update_health_member.")
             self.driver.device_driver.update_healthmonitor(context, obj, old_obj)
             self.successful_completion(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             self.failed_completion(context, obj)
 
     def delete(self, context, obj):
         try:
+            LOG.debug("enter plugin driver for delete_health_member.")
             self.driver.device_driver.delete_healthmonitor(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             pass
         self.successful_completion(context, obj, delete=True)
 
@@ -170,22 +200,28 @@ class ArrayHealthMonitorManager(driver_base.BaseHealthMonitorManager):
 class ArrayL7PolicyManager(driver_base.BaseL7PolicyManager):
     def create(self, context, obj):
         try:
+            LOG.debug("enter plugin driver for create_l7policy.")
             self.driver.device_driver.create_l7_policy(obj)
             self.successful_completion(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             self.failed_completion(context, obj)
 
     def update(self, context, old_obj, obj):
         try:
+            LOG.debug("enter plugin driver for update_l7policy.")
             self.driver.device_driver.update_l7_policy(obj, old_obj)
             self.successful_completion(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             self.failed_completion(context, obj)
 
     def delete(self, context, obj):
         try:
+            LOG.debug("enter plugin driver for delete_l7policy.")
             self.driver.device_driver.delete_l7_policy(obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             pass
         self.successful_completion(context, obj, delete=True)
 
@@ -193,22 +229,28 @@ class ArrayL7PolicyManager(driver_base.BaseL7PolicyManager):
 class ArrayL7RuleManager(driver_base.BaseL7RuleManager):
     def create(self, context, obj):
         try:
+            LOG.debug("enter plugin driver for create_l7rule.")
             self.driver.device_driver.create_l7_rule(obj)
             self.successful_completion(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             self.failed_completion(context, obj)
 
     def update(self, context, old_obj, obj):
         try:
+            LOG.debug("enter plugin driver for update_l7rule.")
             self.driver.device_driver.update_l7_rule(obj, old_obj)
             self.successful_completion(context, obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             self.failed_completion(context, obj)
 
     def delete(self, context, obj):
         try:
+            LOG.debug("enter plugin driver for delete_l7rule.")
             self.driver.device_driver.delete_l7_rule(obj)
         except Exception:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             pass
         self.successful_completion(context, obj, delete=True)
 

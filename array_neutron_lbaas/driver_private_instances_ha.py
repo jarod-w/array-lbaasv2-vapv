@@ -21,6 +21,8 @@ from driver_private_instances import ArrayDeviceDriverV2 \
 from oslo_config import cfg
 from oslo_log import log as logging
 
+import traceback
+
 LOG = logging.getLogger(__name__)
 
 
@@ -105,7 +107,7 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverPrivateInstances):
                 # Secondary data port (floating IP)
                 (port, junk, mgmt_ip) = self.openstack_connector.create_port(
                     lb, hostnames[1], security_group=sec_grp,
-                    create_floating_ip=True, cluster=True
+                    create_floating_ip=True
                 )
                 ports[hostnames[1]] = {
                     "ports": {
@@ -122,7 +124,7 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverPrivateInstances):
                 )
                 # Primary mgmt port (management network)
                 (mgmt_port, mgmt_sec_grp, mgmt_ip) = self.openstack_connector.create_port(
-                    lb, hostnames[0], mgmt_port=True, cluster=True, identifier=identifier
+                    lb, hostnames[0], mgmt_port=True, identifier=identifier
                 )
                 ports[hostnames[0]] = {
                     "ports": {
@@ -140,8 +142,7 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverPrivateInstances):
                 )
                 # Secondary mgmt port (management network)
                 (mgmt_port, junk, mgmt_ip) = self.openstack_connector.create_port(
-                    lb, hostnames[1], mgmt_port=True, security_group=mgmt_sec_grp,
-                    cluster=True
+                    lb, hostnames[1], mgmt_port=True, security_group=mgmt_sec_grp
                 )
                 ports[hostnames[1]] = {
                     "ports": {
@@ -174,6 +175,7 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverPrivateInstances):
                     avoid = vm['id']
             return ports
         except Exception as e:
+            LOG.debug("trace is below: %s", traceback.format_exc())
             if cfg.CONF.lbaas_settings.roll_back_on_error is True:
                 self.openstack_connector.clean_up(
                     instances=vms,

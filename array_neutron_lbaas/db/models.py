@@ -13,10 +13,28 @@
 from neutron.db import models_v2
 from sqlalchemy.ext.declarative import declarative_base
 import sqlalchemy as sa
+try:
+    from neutron_lib.db import model_base
+except ImportError:
+    pass
+
+HAS_ID = None
+if hasattr(models_v2, 'HasId'):
+    HAS_ID = models_v2.HasId
+else:
+    HAS_ID = model_base.HasId
+
+HAS_TENANT = None
+if hasattr(models_v2, 'HasTenant'):
+    HAS_TENANT = models_v2.HasTenant
+elif hasattr(model_base, 'HasTenant'):
+    HAS_TENANT = model_base.HasTenant
+elif hasattr(model_base, 'HasProject'):
+    HAS_TENANT = model_base.HasProject
 
 BaseTable = declarative_base()
 
-class ArrayAmphora(BaseTable, models_v2.HasId, models_v2.HasTenant):
+class ArrayAmphora(BaseTable, HAS_ID, HAS_TENANT):
     """Represents an Array load balancer."""
 
     __tablename__ = "array_amphora"
