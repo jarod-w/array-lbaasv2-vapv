@@ -13,10 +13,10 @@
 import json
 import requests
 import time
-
 import six
 
 from oslo_log import log as logging
+from neutron_lbaas.services.loadbalancer import constants as lb_const
 
 from array_neutron_lbaas.array import exceptions as driver_except
 from array_neutron_lbaas.array.adc_device import ADCDevice
@@ -43,6 +43,7 @@ class ArrayAPVAPIDriver(object):
         """ create a loadbalancer """
         if not argu:
             LOG.error("In create_loadbalancer, it should not pass the None.")
+            return
 
         # create vip
         self._create_vip(argu['vip_address'], argu['netmask'])
@@ -52,6 +53,7 @@ class ArrayAPVAPIDriver(object):
         """ Delete a loadbalancer """
         if not argu:
             LOG.error("In delete_loadbalancer, it should not pass the None.")
+            return
 
         # delete vip
         self._delete_vip()
@@ -61,6 +63,7 @@ class ArrayAPVAPIDriver(object):
         """ create a listener """
         if not argu:
             LOG.error("In create_listener, it should not pass the None.")
+            return
 
         # create vs
         self._create_vs(argu['listener_id'],
@@ -84,6 +87,7 @@ class ArrayAPVAPIDriver(object):
 
         if not argu:
             LOG.error("In delete_listener, it should not pass the None.")
+            return
 
         # delete vs
         self._delete_vs(argu['listener_id'], argu['protocol'])
@@ -179,6 +183,7 @@ class ArrayAPVAPIDriver(object):
 
         if not argu:
             LOG.error("In create_pool, it should not pass the None.")
+            return
 
         cmd_apv_create_group = ADCDevice.create_group(argu['pool_id'],
                                                       argu['lb_algorithm'],
@@ -202,6 +207,7 @@ class ArrayAPVAPIDriver(object):
 
         if not argu:
             LOG.error("In delete_pool, it should not pass the None.")
+            return
 
         # delete policy
         if argu['listener_id']:
@@ -221,6 +227,7 @@ class ArrayAPVAPIDriver(object):
 
         if not argu:
             LOG.error("In create_member, it should not pass the None.")
+            return
 
         cmd_apv_create_real_server = ADCDevice.create_real_server(
                                                        argu['member_id'],
@@ -244,6 +251,7 @@ class ArrayAPVAPIDriver(object):
 
         if not argu:
             LOG.error("In delete_member, it should not pass the None.")
+            return
 
         cmd_apv_no_rs = ADCDevice.no_real_server(argu['protocol'], argu['member_id'])
 
@@ -255,6 +263,7 @@ class ArrayAPVAPIDriver(object):
 
         if not argu:
             LOG.error("In create_health_monitor, it should not pass the None.")
+            return
 
         cmd_apv_create_hm = ADCDevice.create_health_monitor(
                                                            argu['hm_id'],
@@ -277,6 +286,7 @@ class ArrayAPVAPIDriver(object):
 
         if not argu:
             LOG.error("In delete_health_monitor, it should not pass the None.")
+            return
 
         cmd_apv_detach_hm = ADCDevice.detach_hm_to_group(argu['pool_id'], argu['hm_id'])
 
@@ -287,18 +297,81 @@ class ArrayAPVAPIDriver(object):
 
 
     def create_l7_policy(self, argu):
-        pass
+        if not argu:
+            LOG.error("In create_l7_policy, it should not pass the None.")
+            return
+
+        if argu['action'] == lb_const.L7_POLICY_ACTION_REDIRECT_TO_POOL:
+            LOG.error("In create_l7_policy, it doesn't need do anything.")
+            return
+
+        cmd_create_gruop = None
+        cmd_http_import_error_page = None
+        cmd_http_load_error_page = None
+        cmd_redirect_to_url = None
+        if argu['action'] == lb_const.L7_POLICY_ACTION_REJECT:
+            # create the group using the policy_id
+            cmd_create_group = ADCDevice.create_group(
+                                                      argu['id'],
+                                                      lb_const.LB_METHOD_ROUND_ROBIN,
+                                                      None
+                                                     )
+            cmd_http_import_error_page = ADCDevice.create_http_error_page(argu['listener_id'])
+            cmd_http_load_error_page = ADCDevice.load_http_error_page(argu['listener_id'])
+        elif argu['action'] == lb_const.L7_POLICY_ACTION_REDIRECT_TO_URL:
+            cmd_redirect_to_url = ADCDevice.redirect_to_url(argu['listener_id'],
+                                                            argu['id'],
+                                                            argu['redirect_url'])
+        else:
+            LOG.debug("It fails to parse the policy action")
+            return
+
+        for base_rest_url in self.base_rest_urls:
+            self.run_cli_extend(base_rest_url, cmd_create_group)
+            self.run_cli_extend(base_rest_url, cmd_http_import_error_page)
+            self.run_cli_extend(base_rest_url, cmd_http_load_error_page)
+            self.run_cli_extend(base_rest_url, cmd_redirect_to_url)
 
 
     def delete_l7_policy(self, argu):
-        pass
+        if not argu:
+            LOG.error("In delete_l7_policy, it should not pass the None.")
+            return
+
+        if argu['action'] == lb_const.L7_POLICY_ACTION_REDIRECT_TO_POOL:
+            LOG.error("In delete_l7_policy, it doesn't need do anything.")
+            return
+
+        cmd_no_group = None
+        cmd_no_load_error_page = None
+        cmd_no_error_page = None
+        cmd_no_redirect_to_url = None
+        if argu['action'] == lb_const.L7_POLICY_ACTION_REJECT:
+            cmd_no_group = ADCDevice.no_group(argu['id'])
+            cmd_no_load_error_page = ADCDevice.no_load_error_page(argu['listener_id'])
+            cmd_no_error_page = ADCDevice.no_error_page(argu['listener_id'])
+        elif argu['action'] == lb_const.L7_POLICY_ACTION_REDIRECT_TO_URL:
+            cmd_no_redirect_to_url = ADCDevice.no_redirect_to_url(argu["listener_id"], argu['id'])
+
+        for base_rest_url in self.base_rest_urls:
+            self.run_cli_extend(base_rest_url, cmd_no_group)
+            self.run_cli_extend(base_rest_url, cmd_no_load_error_page)
+            self.run_cli_extend(base_rest_url, cmd_no_error_page)
+            self.run_cli_extend(base_rest_url, cmd_no_redirect_to_url)
 
 
     def create_l7_rule(self, argu):
+        if not argu:
+            LOG.error("In create_l7_rule, it should not pass the None.")
+            return
+
         pass
 
 
     def delete_l7_rule(self, argu):
+        if not argu:
+            LOG.error("In delete_l7_rule, it should not pass the None.")
+            return
         pass
 
 
@@ -368,6 +441,8 @@ class ArrayAPVAPIDriver(object):
 
 
     def run_cli_extend(self, base_rest_url, cmd):
+        if not cmd:
+            return
         url = base_rest_url + '/cli_extend'
         payload = {
             "cmd": cmd

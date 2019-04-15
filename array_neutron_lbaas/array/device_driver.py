@@ -317,7 +317,19 @@ class ArrayADCDriver(object):
 
 
     def create_l7_policy(self, policy, vapv):
-        pass
+        argu = {}
+
+        argu['action'] = policy.action
+        argu['id'] = policy.id
+        argu['listener_id'] = policy.listener_id
+        argu['pool_id'] = policy.redirect_pool_id
+        argu['position'] = policy.position
+        argu['redirect_url'] = policy.redirect_url
+
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
+        driver = ArrayAPVAPIDriver(management_ip)
+        driver.create_l7_policy(argu)
+        driver.write_memory(argu)
 
 
     def update_l7_policy(self, policy, old, vapv):
@@ -325,14 +337,35 @@ class ArrayADCDriver(object):
 
 
     def delete_l7_policy(self, policy, vapv):
-        pass
+        argu = {}
+        argu['action'] = policy.action
+        argu['id'] = policy.id
+        argu['listener_id'] = policy.listener_id
+
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
+        driver = ArrayAPVAPIDriver(management_ip)
+        driver.delete_l7_policy(argu)
+        driver.write_memory(argu)
 
 
     def create_l7_rule(self, rule, vapv):
         argu = {}
-
         policy = rule.policy
-        pass
+
+        argu['policy_id'] = policy.id
+
+        if len(policy.rules) == 1:
+            argu['rule_id'] = rule.id
+            argu['type'] = rule.type
+            argu['key'] = rule.key
+            argu['value'] = rule.value
+            argu['compare_type'] = rule.compare_type
+            argu['invert'] = rule.invert
+
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
+        driver = ArrayAPVAPIDriver(management_ip)
+        driver.create_l7_rule(argu)
+        driver.write_memory(argu)
 
 
     def update_l7_rule(self, rule, old, vapv):
@@ -340,4 +373,12 @@ class ArrayADCDriver(object):
 
 
     def delete_l7_rule(self, rule, vapv):
-        pass
+        argu = {}
+        policy = rule.policy
+
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
+        driver = ArrayAPVAPIDriver(management_ip)
+        driver.delete_l7_rule(argu)
+        driver.write_memory(argu)
+
+

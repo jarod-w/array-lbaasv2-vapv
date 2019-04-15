@@ -324,14 +324,29 @@ class ADCDevice(object):
         return cmd
 
     @staticmethod
-    def create_http_error_page():
+    def create_http_error_page(vs_name):
         #FIXME
-        cmd = "http import error 456 default http://10.8.1.23/xx.html"
+        cmd = "http import error 456 %s http://10.8.1.23/xx.html" % vs_name
         return cmd
 
     @staticmethod
-    def load_http_error_page():
-        cmd = "http error 456 default"
+    def load_http_error_page(vs_name):
+        cmd = "http error 456 %s" % vs_name
+        return cmd
+
+    @staticmethod
+    def no_error_page(vs_name):
+        cmd = "no http import error 456 %s" % vs_name
+        return cmd
+
+    @staticmethod
+    def no_load_error_page(vs_name):
+        cmd = "no http error 456 %s" % vs_name
+        return cmd
+
+    @staticmethod
+    def no_redirect_to_url(vs_name, policy_name):
+        cmd = "no http redirect url %s %s" % (vs_name, policy_name)
         return cmd
 
     @staticmethod

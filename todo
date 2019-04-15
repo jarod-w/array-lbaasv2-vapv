@@ -2,4 +2,3 @@
 * In PRE_SUBNET mode, if two LB named lbv1(firstly created) and lbv2(secondly created) are created in the same subnet, and then customer delete lbv1, the port will be deleted(and the ip address will be released) in the openstack, however, the released ip is still used in the vAPV.
 * In PER_SUBNET mode, if two LB are created in the same subnet and two listener named lsv1 and lsv2 are created based two LB, the listeners have the same protocol port. If delete one of the listener, the port will be still allowed.
 * Add QoS support
-* 

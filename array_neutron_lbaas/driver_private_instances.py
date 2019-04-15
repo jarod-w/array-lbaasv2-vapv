@@ -235,22 +235,6 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
         return status
 
 
-###############
-# L7 POLICIES #
-###############
-
-    @logging_wrapper
-    def update_l7_policy(self, context, policy, old):
-        hostname = self._get_hostname(policy.root_loadbalancer)
-        vapv = self._get_vapv(context, hostname)
-        super(ArrayDeviceDriverV2, self).update_l7_policy(policy, old, vapv)
-
-    @logging_wrapper
-    def delete_l7_policy(self, context, policy):
-        hostname = self._get_hostname(policy.root_loadbalancer)
-        vapv = self._get_vapv(context, hostname)
-        super(ArrayDeviceDriverV2, self).delete_l7_policy(policy, vapv)
-
 #########
 # STATS #
 #########

@@ -211,51 +211,17 @@ class vAPVDeviceDriverCommon(object):
 
     @logging_wrapper
     def create_l7_policy(self, context, policy):
-        # No point creating policy until there are rules to go in it!
-        pass
+        hostname = self._get_hostname(policy.root_loadbalancer)
+        vapv = self._get_vapv(context, hostname)
 
+    @logging_wrapper
     def update_l7_policy(self, context, policy, old, vapv):
         if not policy.rules:
-            self.delete_l7_policy(policy)
             return
-        # Create the TrafficScript(tm) rule
-        ts_rule_name = "l7policy-{}".format(policy.id)
-        # Make sure the rules are in the correct order
-        vserver = vapv.vserver.get(policy.listener_id)
-        policies = vserver.request_rules
-        try:
-            policies.remove(ts_rule_name)
-        except ValueError:
-            pass
-        position = policy.position
-        if position is None:
-            # No position specified, so just append the rule
-            policies.append(ts_rule_name)
-        else:
-            try:
-                # Ensure l7 rules remain below rate-shaping rules
-                if vserver.request_rules[0].startswith("rate-"):
-                    position += 1
-            except IndexError:
-                pass
-            if position >= len(policies):
-                policies.append(ts_rule_name)
-            else:
-                policies.insert(position, ts_rule_name)
-        # Apply ordered rules to vserver
-        vserver.request_rules = policies
-        vserver.update()
 
+    @logging_wrapper
     def delete_l7_policy(self, context, policy, vapv):
-        ts_rule_name = "l7policy-{}".format(policy.id)
-        vserver = vapv.vserver.get(policy.listener_id)
-        try:
-            vserver.request_rules.remove(ts_rule_name)
-            vserver.update()
-            vapv.rule.delete(ts_rule_name)
-        except ValueError:
-            # May have already been deleted if rules were deleted individually
-            pass
+        pass
 
 ############
 # L7 RULES #
