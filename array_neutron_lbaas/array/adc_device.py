@@ -330,8 +330,8 @@ class ADCDevice(object):
         return cmd
 
     @staticmethod
-    def load_http_error_page(vs_name):
-        cmd = "http error 456 %s" % vs_name
+    def load_http_error_page():
+        cmd = "http error 456 default"
         return cmd
 
     @staticmethod
@@ -340,8 +340,8 @@ class ADCDevice(object):
         return cmd
 
     @staticmethod
-    def no_load_error_page(vs_name):
-        cmd = "no http error 456 %s" % vs_name
+    def no_load_error_page():
+        cmd = "no http error 456 default"
         return cmd
 
     @staticmethod

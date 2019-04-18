@@ -28,12 +28,15 @@ VAPV_REST_USERNAME="restapi"
 VAPV_REST_PASSWORD="click1"
 
 
+def get_vlinks_by_policy(policy_id):
+    return [policy_id + "_v" + str(idx) for idx in range(1, 3)]
+
 class ArrayAPVAPIDriver(object):
     """ The real implementation on host to push config to
         APV instance via RESTful API
     """
     def __init__(self, management_ips):
-        self.base_rest_urls = ["https://" + host + ":9997/rest/apv" for host in management_ips]
+        self.base_rest_urls = ["https://" + host + ":9997/rest/apv" for host in management_ips if host is not None]
 
     def get_auth(self):
         return (VAPV_REST_USERNAME, VAPV_REST_PASSWORD)
@@ -296,7 +299,7 @@ class ArrayAPVAPIDriver(object):
             self.run_cli_extend(base_rest_url, cmd_apv_no_hm)
 
 
-    def create_l7_policy(self, argu):
+    def create_l7_policy(self, argu, vlink_created=True):
         if not argu:
             LOG.error("In create_l7_policy, it should not pass the None.")
             return
@@ -305,8 +308,7 @@ class ArrayAPVAPIDriver(object):
             LOG.error("In create_l7_policy, it doesn't need do anything.")
             return
 
-        cmd_create_gruop = None
-        cmd_http_import_error_page = None
+        cmd_create_group = None
         cmd_http_load_error_page = None
         cmd_redirect_to_url = None
         if argu['action'] == lb_const.L7_POLICY_ACTION_REJECT:
@@ -316,8 +318,7 @@ class ArrayAPVAPIDriver(object):
                                                       lb_const.LB_METHOD_ROUND_ROBIN,
                                                       None
                                                      )
-            cmd_http_import_error_page = ADCDevice.create_http_error_page(argu['listener_id'])
-            cmd_http_load_error_page = ADCDevice.load_http_error_page(argu['listener_id'])
+            cmd_http_load_error_page = ADCDevice.load_http_error_page()
         elif argu['action'] == lb_const.L7_POLICY_ACTION_REDIRECT_TO_URL:
             cmd_redirect_to_url = ADCDevice.redirect_to_url(argu['listener_id'],
                                                             argu['id'],
@@ -326,14 +327,20 @@ class ArrayAPVAPIDriver(object):
             LOG.debug("It fails to parse the policy action")
             return
 
+        if vlink_created:
+            vlinks = get_vlinks_by_policy(argu['id'])
+            for vlink in vlinks:
+                cmd_create_vlink = ADCDevice.create_vlink(vlink)
+                for base_rest_url in self.base_rest_urls:
+                    self.run_cli_extend(base_rest_url, cmd_create_vlink)
+
         for base_rest_url in self.base_rest_urls:
             self.run_cli_extend(base_rest_url, cmd_create_group)
-            self.run_cli_extend(base_rest_url, cmd_http_import_error_page)
             self.run_cli_extend(base_rest_url, cmd_http_load_error_page)
             self.run_cli_extend(base_rest_url, cmd_redirect_to_url)
 
 
-    def delete_l7_policy(self, argu):
+    def delete_l7_policy(self, argu, vlink_deleted=True):
         if not argu:
             LOG.error("In delete_l7_policy, it should not pass the None.")
             return
@@ -344,19 +351,23 @@ class ArrayAPVAPIDriver(object):
 
         cmd_no_group = None
         cmd_no_load_error_page = None
-        cmd_no_error_page = None
         cmd_no_redirect_to_url = None
         if argu['action'] == lb_const.L7_POLICY_ACTION_REJECT:
             cmd_no_group = ADCDevice.no_group(argu['id'])
-            cmd_no_load_error_page = ADCDevice.no_load_error_page(argu['listener_id'])
-            cmd_no_error_page = ADCDevice.no_error_page(argu['listener_id'])
+            cmd_no_load_error_page = ADCDevice.no_load_error_page()
         elif argu['action'] == lb_const.L7_POLICY_ACTION_REDIRECT_TO_URL:
             cmd_no_redirect_to_url = ADCDevice.no_redirect_to_url(argu["listener_id"], argu['id'])
+
+        if vlink_deleted:
+            vlinks = get_vlinks_by_policy(argu['id'])
+            for vlink in vlinks:
+                cmd_no_vlink = ADCDevice.no_vlink(vlink)
+                for base_rest_url in self.base_rest_urls:
+                    self.run_cli_extend(base_rest_url, cmd_no_vlink)
 
         for base_rest_url in self.base_rest_urls:
             self.run_cli_extend(base_rest_url, cmd_no_group)
             self.run_cli_extend(base_rest_url, cmd_no_load_error_page)
-            self.run_cli_extend(base_rest_url, cmd_no_error_page)
             self.run_cli_extend(base_rest_url, cmd_no_redirect_to_url)
 
 
@@ -365,15 +376,24 @@ class ArrayAPVAPIDriver(object):
             LOG.error("In create_l7_rule, it should not pass the None.")
             return
 
-        pass
-
+        cmd_create_rule = ADCDevice.create_l7_rule(argu['rule_id'],
+                                                   argu['vs_id'],
+                                                   argu['group_id'],
+                                                   argu['rule_type'],
+                                                   argu['compare_type'],
+                                                   argu['value'],
+                                                   argu['key'])
+        for base_rest_url in self.base_rest_urls:
+            self.run_cli_extend(base_rest_url, cmd_create_rule)
 
     def delete_l7_rule(self, argu):
         if not argu:
             LOG.error("In delete_l7_rule, it should not pass the None.")
             return
-        pass
 
+        cmd_no_rule = ADCDevice.no_l7_rule(argu['rule_id'], argu['rule_type'])
+        for base_rest_url in self.base_rest_urls:
+            self.run_cli_extend(base_rest_url, cmd_no_rule)
 
     def configure_cluster(self, cluster_id, priority, vip_address):
         # configure a virtual interface

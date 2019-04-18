@@ -201,7 +201,7 @@ class ArrayL7PolicyManager(driver_base.BaseL7PolicyManager):
     def create(self, context, obj):
         try:
             LOG.debug("enter plugin driver for create_l7policy.")
-            self.driver.device_driver.create_l7_policy(obj)
+            self.driver.device_driver.create_l7_policy(context, obj)
             self.successful_completion(context, obj)
         except Exception:
             LOG.debug("trace is below: %s", traceback.format_exc())
@@ -210,7 +210,7 @@ class ArrayL7PolicyManager(driver_base.BaseL7PolicyManager):
     def update(self, context, old_obj, obj):
         try:
             LOG.debug("enter plugin driver for update_l7policy.")
-            self.driver.device_driver.update_l7_policy(obj, old_obj)
+            self.driver.device_driver.update_l7_policy(context, obj, old_obj)
             self.successful_completion(context, obj)
         except Exception:
             LOG.debug("trace is below: %s", traceback.format_exc())
@@ -219,7 +219,7 @@ class ArrayL7PolicyManager(driver_base.BaseL7PolicyManager):
     def delete(self, context, obj):
         try:
             LOG.debug("enter plugin driver for delete_l7policy.")
-            self.driver.device_driver.delete_l7_policy(obj)
+            self.driver.device_driver.delete_l7_policy(context, obj)
         except Exception:
             LOG.debug("trace is below: %s", traceback.format_exc())
             pass
@@ -239,7 +239,7 @@ class ArrayL7RuleManager(driver_base.BaseL7RuleManager):
     def update(self, context, old_obj, obj):
         try:
             LOG.debug("enter plugin driver for update_l7rule.")
-            self.driver.device_driver.update_l7_rule(obj, old_obj)
+            self.driver.device_driver.update_l7_rule(context, obj, old_obj)
             self.successful_completion(context, obj)
         except Exception:
             LOG.debug("trace is below: %s", traceback.format_exc())
@@ -248,7 +248,7 @@ class ArrayL7RuleManager(driver_base.BaseL7RuleManager):
     def delete(self, context, obj):
         try:
             LOG.debug("enter plugin driver for delete_l7rule.")
-            self.driver.device_driver.delete_l7_rule(obj)
+            self.driver.device_driver.delete_l7_rule(context, obj)
         except Exception:
             LOG.debug("trace is below: %s", traceback.format_exc())
             pass

@@ -14,6 +14,7 @@
 from oslo_log import log as logging
 
 from array_neutron_lbaas.array.apv_driver import ArrayAPVAPIDriver
+from array_neutron_lbaas.array.apv_driver import get_vlinks_by_policy
 
 LOG = logging.getLogger(__name__)
 
@@ -139,7 +140,6 @@ class ArrayADCDriver(object):
         pool = listener.default_pool
         if pool:
             sp_type = None
-            ck_name = None
             argu['pool_id'] = pool.id
             if pool.session_persistence:
                 sp_type = pool.session_persistence.type
@@ -316,7 +316,7 @@ class ArrayADCDriver(object):
         driver.write_memory(argu)
 
 
-    def create_l7_policy(self, policy, vapv):
+    def create_l7_policy(self, policy, vapv, updated=False):
         argu = {}
 
         argu['action'] = policy.action
@@ -329,14 +329,21 @@ class ArrayADCDriver(object):
         management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.create_l7_policy(argu)
-        driver.write_memory(argu)
+        if not updated:
+            driver.write_memory(argu)
 
 
     def update_l7_policy(self, policy, old, vapv):
-        pass
+        argu = {}
+        self.delete_l7_policy(old, vapv, updated=True)
+        self.create_l7_policy(policy, vapv, updated=True)
 
+        self.create_all_rules(policy, vapv)
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
+        driver = ArrayAPVAPIDriver(management_ip)
+        driver.write_memory(argu)
 
-    def delete_l7_policy(self, policy, vapv):
+    def delete_l7_policy(self, policy, vapv, updated=False):
         argu = {}
         argu['action'] = policy.action
         argu['id'] = policy.id
@@ -344,41 +351,121 @@ class ArrayADCDriver(object):
 
         management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
+
+        LOG.debug("Delete all rules from policy in delete_l7_policy")
+        self.delete_all_rules(policy, vapv)
+
         driver.delete_l7_policy(argu)
-        driver.write_memory(argu)
+        if not updated:
+            driver.write_memory(argu)
 
 
     def create_l7_rule(self, rule, vapv):
         argu = {}
         policy = rule.policy
 
-        argu['policy_id'] = policy.id
-
-        if len(policy.rules) == 1:
-            argu['rule_id'] = rule.id
-            argu['type'] = rule.type
-            argu['key'] = rule.key
-            argu['value'] = rule.value
-            argu['compare_type'] = rule.compare_type
-            argu['invert'] = rule.invert
+        LOG.debug("Delete all rules from policy in create_l7_rule")
+        self.delete_all_rules(policy, vapv)
+        LOG.debug("Create all rules from policy in create_l7_rule")
+        self.create_all_rules(policy, vapv, filt=rule.id)
 
         management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
-        driver.create_l7_rule(argu)
         driver.write_memory(argu)
 
 
     def update_l7_rule(self, rule, old, vapv):
-        pass
+        argu = {}
+        old_policy = old.policy
+        policy = rule.policy
+        LOG.debug("Delete all rules from old policy in update_l7_rule")
+        self.delete_all_rules(old_policy, vapv)
+        LOG.debug("Create all rules from new policy in update_l7_rule")
+        self.create_all_rules(policy, vapv)
 
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
+        driver = ArrayAPVAPIDriver(management_ip)
+        driver.write_memory(argu)
 
     def delete_l7_rule(self, rule, vapv):
         argu = {}
         policy = rule.policy
 
+        LOG.debug("Delete all rules from policy in delete_l7_rule")
+        self.delete_all_rules(policy, vapv)
+        LOG.debug("Create all rules from policy in delete_l7_rule")
+        self.create_all_rules(policy, vapv, filt=rule.id)
+
         management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
-        driver.delete_l7_rule(argu)
         driver.write_memory(argu)
+
+    def delete_all_rules(self, policy, vapv):
+        argu = {}
+        rules = policy.rules
+
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
+        driver = ArrayAPVAPIDriver(management_ip)
+
+        for rule in rules:
+            argu['rule_type'] = rule.type
+            argu['rule_id'] = rule.id
+            driver.delete_l7_rule(argu)
+
+    def create_all_rules(self, policy, vapv, filt = None):
+        argu = {}
+        rules = policy.rules
+
+        if filt:
+            idx = 0
+            for rule in rules:
+                if rule.id == filt:
+                    break
+                idx += 1
+
+        cnt = len(rules)
+        if cnt > idx:
+            del rules[idx]
+            cnt -= 1
+
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
+        driver = ArrayAPVAPIDriver(management_ip)
+
+        argu['vs_id'] = policy.listener_id
+        if policy.redirect_pool:
+            argu['group_id'] = policy.redirect_pool.id
+        else:
+            argu['group_id'] = policy.listener.default_pool_id
+
+        if cnt == 0:
+            LOG.debug("No any rule needs to be created.")
+        elif cnt == 1:
+            rule = rules[0]
+            argu['rule_type'] = rule.type
+            argu['compare_type'] = rule.compare_type
+            argu['rule_id'] = rule.id
+            argu['rule_value'] = rule.value
+            argu['rule_key'] = rule.key
+            driver.create_l7_rule(argu)
+        elif cnt == 2 or cnt == 3:
+            vlinks = get_vlinks_by_policy(policy.id)
+            for rule_idx in range(cnt):
+                rule = rules[rule_idx]
+
+                argu['rule_type'] = rule.type
+                argu['compare_type'] = rule.compare_type
+                argu['rule_id'] = rule.id
+                argu['rule_value'] = rule.value
+                argu['rule_key'] = rule.key
+                if rule_idx == 0:
+                    argu['group_id'] = vlinks[0]
+                elif rule_idx == (cnt - 1):
+                    argu['vs_id'] = vlinks[1];
+                else:
+                    argu['group_id'] = vlinks[1]
+                    argu['vs_id'] = vlinks[0];
+                driver.create_l7_rule(argu)
+        else:
+            LOG.debug("It doesn't support to create more than three rule in one policy.")
 
 

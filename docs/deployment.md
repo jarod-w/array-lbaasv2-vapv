@@ -132,10 +132,26 @@ Which deployment model do you wish to use?
 	3) A vAPV instance per load balancer object (VIP)
 Please enter your choice [1-3]: 2
 
-How should vAPV instances be deployed?
+How should vAPVs be deployed?
 	1) As single instances
 	2) As HA pairs
+Please enter your choice [1-2]: 2
+
+Do you wish to use the Nova scheduler 'different_host' hint to ensure primary and secondary instances are created on different compute hosts (N.B. select 'No' if you only have one compute host or a failure will occur)?
+	1) Yes
+	2) No
 Please enter your choice [1-2]: 1
+
+Do you wish to specify Availability Zones for primary and secondary vAPV instances?
+	1) Yes
+	2) No
+Please enter your choice [1-2]: 1
+
+Please specify the name of the Availability Zone for primary vAPVs
+Input: primary_az
+
+Please specify the name of the Availability Zone for secondary vAPVs
+Input: secondary_az
 
 What MTU should be used by the vAPV instance’s network interfaces?
 	1) 1500 (local/flat/VLAN)
@@ -204,7 +220,7 @@ Please enter your choice [1-2]: 2
 Note:
 
 * For question "Which deployment model do you wish to use?", only option 2 (A vAPV instance per subnet) is supported for now.
-* For question "How should vAPV instances be deployed?", only option 1 (As single instances) is supported for now.
+* For question "How should vAPV instances be deployed?", option 2 (As HA pairs) should be choosed for cluster feature.
 * For question "Which management mode should be used?", only option 1 (Dedicated management network) is supported for now.
 * For question "What is the Glance ID of the vAPV image to use?", find the Glance ID of the desired image from all images listed by executing CLI "**openstack image list**".
 * For question "What is the Nova ID of the flavor used to create vAPV instances?", find the Nova ID of the desired flavor from all flavors listed by executing "**openstack flavor list --all**".
