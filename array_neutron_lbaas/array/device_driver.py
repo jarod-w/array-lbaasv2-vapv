@@ -326,14 +326,36 @@ class ArrayADCDriver(object):
         argu['position'] = policy.position
         argu['redirect_url'] = policy.redirect_url
 
+        sp_type = None
+        ck_name = None
+        pool = policy.redirect_pool
+        if pool:
+            if pool.session_persistence:
+                sp_type = pool.session_persistence.type
+                ck_name = pool.session_persistence.cookie_name
+            argu['session_persistence_type'] = sp_type
+            argu['cookie_name'] = ck_name
+            argu['lb_algorithm'] = pool.lb_algorithm
+
         management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
-        driver.create_l7_policy(argu)
+        driver.create_l7_policy(argu, updated=updated)
         if not updated:
             driver.write_memory(argu)
 
 
     def update_l7_policy(self, policy, old, vapv):
+        need_recreate = False
+        policy_dict = policy.to_dict()
+        old_dict = old.to_dict()
+        for changed in ('action', 'redirect_pool_id', 'redirect_url'):
+            if policy_dict[changed] != old_dict[changed]:
+                need_recreate = True
+
+        if not need_recreate:
+            LOG.debug("It doesn't need do any thing(update_l7_policy)")
+            return
+
         argu = {}
         self.delete_l7_policy(old, vapv, updated=True)
         self.create_l7_policy(policy, vapv, updated=True)
@@ -348,6 +370,16 @@ class ArrayADCDriver(object):
         argu['action'] = policy.action
         argu['id'] = policy.id
         argu['listener_id'] = policy.listener_id
+        argu['pool_id'] = policy.redirect_pool_id
+
+        sp_type = None
+        pool = policy.redirect_pool
+        if pool:
+            pool = policy.redirect_pool
+            if pool.session_persistence:
+                sp_type = pool.session_persistence.type
+            argu['session_persistence_type'] = sp_type
+            argu['lb_algorithm'] = pool.lb_algorithm
 
         management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
@@ -355,7 +387,7 @@ class ArrayADCDriver(object):
         LOG.debug("Delete all rules from policy in delete_l7_policy")
         self.delete_all_rules(policy, vapv)
 
-        driver.delete_l7_policy(argu)
+        driver.delete_l7_policy(argu, updated=updated)
         if not updated:
             driver.write_memory(argu)
 
@@ -367,7 +399,7 @@ class ArrayADCDriver(object):
         LOG.debug("Delete all rules from policy in create_l7_rule")
         self.delete_all_rules(policy, vapv)
         LOG.debug("Create all rules from policy in create_l7_rule")
-        self.create_all_rules(policy, vapv, filt=rule.id)
+        self.create_all_rules(policy, vapv)
 
         management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
@@ -375,13 +407,39 @@ class ArrayADCDriver(object):
 
 
     def update_l7_rule(self, rule, old, vapv):
+        need_recreate = False
+        policy_changed = False
+        rule_dict = rule.to_dict()
+        old_dict = old.to_dict()
+        for changed in ('type', 'compare_type', 'l7policy_id', 'key', 'value'):
+            if rule_dict[changed] != old_dict[changed]:
+                need_recreate = True
+
+        if not need_recreate:
+            LOG.debug("It doesn't need do any thing(update_l7_rule)")
+            return
+
+        if rule_dict['l7policy_id'] != old_dict['l7policy_id']:
+            policy_changed = True
+
         argu = {}
         old_policy = old.policy
         policy = rule.policy
-        LOG.debug("Delete all rules from old policy in update_l7_rule")
-        self.delete_all_rules(old_policy, vapv)
-        LOG.debug("Create all rules from new policy in update_l7_rule")
-        self.create_all_rules(policy, vapv)
+        if policy_changed:
+            LOG.debug("Delete all rules from old policy in update_l7_rule")
+            self.delete_all_rules(old_policy, vapv)
+            LOG.debug("Delete all rules from new policy in update_l7_rule")
+            self.delete_all_rules(policy, vapv)
+
+            LOG.debug("Create all rules from old policy in update_l7_rule")
+            self.create_all_rules(policy, vapv, filt=rule.id)
+            LOG.debug("Create all rules from new policy in update_l7_rule")
+            self.create_all_rules(policy, vapv)
+        else:
+            LOG.debug("Delete all rules from old policy in update_l7_rule")
+            self.delete_all_rules(old_policy, vapv)
+            LOG.debug("Create all rules from new policy in update_l7_rule")
+            self.create_all_rules(policy, vapv)
 
         management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
@@ -416,17 +474,16 @@ class ArrayADCDriver(object):
         argu = {}
         rules = policy.rules
 
+        idx = 0
+        cnt = len(rules)
         if filt:
-            idx = 0
             for rule in rules:
                 if rule.id == filt:
                     break
                 idx += 1
-
-        cnt = len(rules)
-        if cnt > idx:
-            del rules[idx]
-            cnt -= 1
+            if cnt > idx:
+                del rules[idx]
+                cnt -= 1
 
         management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
@@ -460,7 +517,14 @@ class ArrayADCDriver(object):
                 if rule_idx == 0:
                     argu['group_id'] = vlinks[0]
                 elif rule_idx == (cnt - 1):
-                    argu['vs_id'] = vlinks[1];
+                    if policy.redirect_pool:
+                        argu['group_id'] = policy.redirect_pool.id
+                    else:
+                        argu['group_id'] = policy.listener.default_pool_id
+                    if cnt == 2:
+                        argu['vs_id'] = vlinks[0];
+                    else:
+                        argu['vs_id'] = vlinks[1];
                 else:
                     argu['group_id'] = vlinks[1]
                     argu['vs_id'] = vlinks[0];

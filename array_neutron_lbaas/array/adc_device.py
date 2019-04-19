@@ -352,7 +352,7 @@ class ADCDevice(object):
     @staticmethod
     def redirect_to_url(vs_name, policy_name, dest_url):
         (proto, host, path) = parse_dest_url(dest_url)
-        cmd = "http redirect url %s %s 1 '<regex>*' '<regex>*' %s %s %s 302" % \
+        cmd = "http redirect url %s %s 1 \"<regex>.*\" \"<regex>.*\" \"%s\" \"%s\" \"%s\" 302" % \
                 (vs_name, policy_name, proto, host, path)
         return cmd
 
@@ -397,7 +397,7 @@ class ADCDevice(object):
         elif rule_type == lb_const.L7_RULE_TYPE_FILE_TYPE:
             v_str = "\.%s$" % value
 
-        cmd += "%s %s %s %s" % (rule_id, vs_id, group_id, v_str)
+        cmd += " %s %s %s \"%s\" 1" % (rule_id, vs_id, group_id, v_str)
         return cmd
 
     @staticmethod

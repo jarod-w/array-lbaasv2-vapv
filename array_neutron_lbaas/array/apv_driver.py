@@ -299,18 +299,22 @@ class ArrayAPVAPIDriver(object):
             self.run_cli_extend(base_rest_url, cmd_apv_no_hm)
 
 
-    def create_l7_policy(self, argu, vlink_created=True):
+    def create_l7_policy(self, argu, updated=False):
         if not argu:
             LOG.error("In create_l7_policy, it should not pass the None.")
-            return
-
-        if argu['action'] == lb_const.L7_POLICY_ACTION_REDIRECT_TO_POOL:
-            LOG.error("In create_l7_policy, it doesn't need do anything.")
             return
 
         cmd_create_group = None
         cmd_http_load_error_page = None
         cmd_redirect_to_url = None
+        if argu['pool_id']:
+            self._create_policy(argu['pool_id'],
+                                argu['listener_id'],
+                                argu['session_persistence_type'],
+                                argu['lb_algorithm'],
+                                argu['cookie_name']
+                               )
+
         if argu['action'] == lb_const.L7_POLICY_ACTION_REJECT:
             # create the group using the policy_id
             cmd_create_group = ADCDevice.create_group(
@@ -323,11 +327,8 @@ class ArrayAPVAPIDriver(object):
             cmd_redirect_to_url = ADCDevice.redirect_to_url(argu['listener_id'],
                                                             argu['id'],
                                                             argu['redirect_url'])
-        else:
-            LOG.debug("It fails to parse the policy action")
-            return
 
-        if vlink_created:
+        if not updated:
             vlinks = get_vlinks_by_policy(argu['id'])
             for vlink in vlinks:
                 cmd_create_vlink = ADCDevice.create_vlink(vlink)
@@ -340,25 +341,26 @@ class ArrayAPVAPIDriver(object):
             self.run_cli_extend(base_rest_url, cmd_redirect_to_url)
 
 
-    def delete_l7_policy(self, argu, vlink_deleted=True):
+    def delete_l7_policy(self, argu, updated=False):
         if not argu:
             LOG.error("In delete_l7_policy, it should not pass the None.")
             return
 
-        if argu['action'] == lb_const.L7_POLICY_ACTION_REDIRECT_TO_POOL:
-            LOG.error("In delete_l7_policy, it doesn't need do anything.")
-            return
+        if argu['pool_id']:
+            self._delete_policy(
+                               argu['listener_id'],
+                               argu['session_persistence_type'],
+                               argu['lb_algorithm']
+                               )
 
         cmd_no_group = None
-        cmd_no_load_error_page = None
         cmd_no_redirect_to_url = None
         if argu['action'] == lb_const.L7_POLICY_ACTION_REJECT:
             cmd_no_group = ADCDevice.no_group(argu['id'])
-            cmd_no_load_error_page = ADCDevice.no_load_error_page()
         elif argu['action'] == lb_const.L7_POLICY_ACTION_REDIRECT_TO_URL:
             cmd_no_redirect_to_url = ADCDevice.no_redirect_to_url(argu["listener_id"], argu['id'])
 
-        if vlink_deleted:
+        if not updated:
             vlinks = get_vlinks_by_policy(argu['id'])
             for vlink in vlinks:
                 cmd_no_vlink = ADCDevice.no_vlink(vlink)
@@ -367,7 +369,6 @@ class ArrayAPVAPIDriver(object):
 
         for base_rest_url in self.base_rest_urls:
             self.run_cli_extend(base_rest_url, cmd_no_group)
-            self.run_cli_extend(base_rest_url, cmd_no_load_error_page)
             self.run_cli_extend(base_rest_url, cmd_no_redirect_to_url)
 
 
@@ -381,8 +382,8 @@ class ArrayAPVAPIDriver(object):
                                                    argu['group_id'],
                                                    argu['rule_type'],
                                                    argu['compare_type'],
-                                                   argu['value'],
-                                                   argu['key'])
+                                                   argu['rule_value'],
+                                                   argu['rule_key'])
         for base_rest_url in self.base_rest_urls:
             self.run_cli_extend(base_rest_url, cmd_create_rule)
 

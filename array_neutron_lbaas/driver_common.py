@@ -213,15 +213,19 @@ class vAPVDeviceDriverCommon(object):
     def create_l7_policy(self, context, policy):
         hostname = self._get_hostname(policy.root_loadbalancer)
         vapv = self._get_vapv(context, hostname)
+        self.array_vapv_driver.create_l7_policy(policy, vapv)
 
     @logging_wrapper
-    def update_l7_policy(self, context, policy, old, vapv):
-        if not policy.rules:
-            return
+    def update_l7_policy(self, context, policy, old):
+        hostname = self._get_hostname(policy.root_loadbalancer)
+        vapv = self._get_vapv(context, hostname)
+        self.array_vapv_driver.update_l7_policy(policy, old, vapv)
 
     @logging_wrapper
-    def delete_l7_policy(self, context, policy, vapv):
-        pass
+    def delete_l7_policy(self, context, policy):
+        hostname = self._get_hostname(policy.root_loadbalancer)
+        vapv = self._get_vapv(context, hostname)
+        self.array_vapv_driver.delete_l7_policy(policy, vapv)
 
 ############
 # L7 RULES #
@@ -229,20 +233,21 @@ class vAPVDeviceDriverCommon(object):
 
     @logging_wrapper
     def create_l7_rule(self, context, rule):
-        self.update_l7_rule(rule, None)
+        hostname = self._get_hostname(rule.root_loadbalancer)
+        vapv = self._get_vapv(context, hostname)
+        self.array_vapv_driver.create_l7_rule(rule, vapv)
 
     @logging_wrapper
     def update_l7_rule(self, context, rule, old):
-        self.update_l7_policy(rule.policy, None)
+        hostname = self._get_hostname(rule.root_loadbalancer)
+        vapv = self._get_vapv(context, hostname)
+        self.array_vapv_driver.update_l7_rule(rule, old, vapv)
 
     @logging_wrapper
-    def delete_l7_rule(self, context, rule_to_delete):
-        policy = rule_to_delete.policy
-        policy.rules = [
-            rule for rule in policy.rules
-            if rule.id != rule_to_delete.id
-        ]
-        self.update_l7_policy(policy, None)
+    def delete_l7_rule(self, context, rule):
+        hostname = self._get_hostname(rule.root_loadbalancer)
+        vapv = self._get_vapv(context, hostname)
+        self.array_vapv_driver.delete_l7_rule(rule, vapv)
 
 #########
 # STATS #

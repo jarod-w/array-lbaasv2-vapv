@@ -230,7 +230,7 @@ class ArrayL7RuleManager(driver_base.BaseL7RuleManager):
     def create(self, context, obj):
         try:
             LOG.debug("enter plugin driver for create_l7rule.")
-            self.driver.device_driver.create_l7_rule(obj)
+            self.driver.device_driver.create_l7_rule(context, obj)
             self.successful_completion(context, obj)
         except Exception:
             LOG.debug("trace is below: %s", traceback.format_exc())
