@@ -28,6 +28,7 @@ import socket
 from struct import pack
 from time import sleep
 import hashlib
+import netaddr
 
 LOG = logging.getLogger(__name__)
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -703,7 +704,15 @@ class OpenStackInterface(object):
     def get_subnet_netmask(self, subnet_id):
         neutron = self.get_neutron_client()
         subnet = neutron.show_subnet(subnet_id)['subnet']
-        return self.get_netmask(subnet['cidr'])
+        ip_version = subnet['ip_version']
+        if int(ip_version) == 6:
+            return self.get_netmask_ipv6(subnet['cidr'])
+        else:
+            return self.get_netmask(subnet['cidr'])
+
+    def get_netmask_ipv6(self, cidr):
+        net = netaddr.IPNetwork(cidr)
+        return str(net.prefixlen)
 
     def get_netmask(self, cidr):
         mask = int(cidr.split("/")[1])
