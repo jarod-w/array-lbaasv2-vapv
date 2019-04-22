@@ -37,6 +37,7 @@ function build_mgmt_network {
     neutron security-group-create lb-mgmt-sec-grp
     neutron security-group-rule-create --protocol icmp lb-mgmt-sec-grp
     neutron security-group-rule-create --protocol tcp --port-range-min 22 --port-range-max 22 lb-mgmt-sec-grp
+    neutron security-group-rule-create --protocol tcp --port-range-min 8889 --port-range-max 8889 lb-mgmt-sec-grp
     neutron security-group-rule-create --protocol tcp --port-range-min 9997 --port-range-max 9997 lb-mgmt-sec-grp
     neutron security-group-rule-create --protocol icmpv6 --ethertype IPv6 --remote-ip ::/0 lb-mgmt-sec-grp
 

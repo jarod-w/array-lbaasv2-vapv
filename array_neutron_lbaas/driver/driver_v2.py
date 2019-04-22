@@ -105,7 +105,7 @@ class ArrayListenerManager(driver_base.BaseListenerManager):
 class ArrayPoolManager(driver_base.BasePoolManager):
     def create(self, context, obj):
         try:
-            LOG.debug("enter plugin driver for create_listener.")
+            LOG.debug("enter plugin driver for create_pool.")
             self.driver.device_driver.create_pool(context, obj)
             self.successful_completion(context, obj)
         except Exception:
@@ -114,7 +114,7 @@ class ArrayPoolManager(driver_base.BasePoolManager):
 
     def update(self, context, old_obj, obj):
         try:
-            LOG.debug("enter plugin driver for update_listener.")
+            LOG.debug("enter plugin driver for update_pool.")
             self.driver.device_driver.update_pool(context, obj, old_obj)
             self.successful_completion(context, obj)
         except Exception:
@@ -123,7 +123,7 @@ class ArrayPoolManager(driver_base.BasePoolManager):
 
     def delete(self, context, obj):
         try:
-            LOG.debug("enter plugin driver for delete_listener.")
+            LOG.debug("enter plugin driver for delete_pool.")
             self.driver.device_driver.delete_pool(context, obj)
         except Exception:
             LOG.debug("trace is below: %s", traceback.format_exc())

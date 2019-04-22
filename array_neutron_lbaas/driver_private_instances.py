@@ -246,12 +246,9 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
         )
         hostname = self._get_hostname(loadbalancer)
         vapv = self._get_vapv(context, hostname)
-        if deployment_model in ["PER_TENANT", "PER_SUBNET"]:
-            return super(ArrayDeviceDriverV2, self).stats(
-                vapv, loadbalancer.vip_address
+        return super(ArrayDeviceDriverV2, self).stats(
+                vapv, loadbalancer
             )
-        elif self.lb_deployment_model == "PER_LOADBALANCER":
-            return super(ArrayDeviceDriverV2, self).stats(vapv)
 
 ########
 # MISC #

@@ -24,6 +24,8 @@ from openstack_connector import OpenStackInterface
 from oslo_config import cfg
 from oslo_log import log as logging
 from traceback import format_exc
+from xmlrpclib import ServerProxy
+
 try:
     from neutron_lbaas.common.cert_manager import CERT_MANAGER_PLUGIN
 except ImportError:
@@ -253,8 +255,46 @@ class vAPVDeviceDriverCommon(object):
 # STATS #
 #########
 
-    def stats(self, context, vapv, listen_ip=None):
-        pass
+    def stats(self, vapv, loadbalancer):
+        pri_mgmt_addr = vapv['pri_mgmt_address']
+        sec_mgmt_addr = vapv['sec_mgmt_address']
+        pri_url = "http://" + pri_mgmt_addr + ":8889"
+        sec_url = "http://" + sec_mgmt_addr + ":8889"
+        listeners = loadbalancer.listeners
+
+        stats = {}
+        stats["bytes_in"] = 0
+        stats["bytes_out"] = 0
+        stats["active_connections"] = 0
+        stats["total_connections"] = 0
+        for listener in listeners:
+            lis_id = listener.id
+            lis_protocol = listener.protocol
+            server = ServerProxy(pri_url)
+            stat = server.get_string(lis_protocol, lis_id)
+            if stat == "None" or stat["bytes_in"] == -1:
+                server = ServerProxy(sec_url)
+                stat = server.get_string(lis_protocol, lis_id)
+            try:
+                stats["bytes_in"] += int(stat["bytes_in"])
+                stats["bytes_out"] += int(stat["bytes_out"])
+                stats["active_connections"] += int(stat["active_connections"])
+                stats["total_connections"] += int(stat["total_connections"])
+            except:
+                LOG.error("Failed to get the loadbalancer stats")
+                return {
+                    "bytes_in": -1,
+                    "bytes_out": -1,
+                    "active_connections": -1,
+                    "total_connections": -1
+                }
+        LOG.debug("got the loadbalancer stats %s", stats)
+        return {
+            "bytes_in": stats["bytes_in"],
+            "bytes_out": stats["bytes_out"],
+            "active_connections": stats["active_connections"],
+            "total_connections": stats["total_connections"]
+        }
 
 ###########
 # REFRESH #

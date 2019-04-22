@@ -87,7 +87,7 @@ services_director_setting_opts = [
                help='Bandwidth allowance for vAPV instances')
 ]
 vapv_setting_opts = [
-    cfg.IntOpt('admin_port', default=9090,
+    cfg.IntOpt('admin_port', default=8889,
                help='Port that the vAPV admin interface listens on'),
     cfg.StrOpt('api_version', default="4.0",
                help='Version of Stingray REST API to use'),
