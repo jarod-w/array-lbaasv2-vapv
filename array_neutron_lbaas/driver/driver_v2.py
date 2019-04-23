@@ -30,8 +30,6 @@ class ArrayLoadBalancerDriver(driver_base.LoadBalancerBaseDriver):
         self.pool = ArrayPoolManager(self)
         self.member = ArrayMemberManager(self)
         self.health_monitor = ArrayHealthMonitorManager(self)
-        self.l7policy = ArrayL7PolicyManager(self)
-        self.l7rule = ArrayL7RuleManager(self)
         self.device_driver = device_driver.ArrayDeviceDriverV2(plugin)
 
 class ArrayLoadBalancerManager(driver_base.BaseLoadBalancerManager):
