@@ -92,9 +92,9 @@ class ArrayADCDriver(object):
             sp_type = None
             ck_name = None
             argu['pool_id'] = pool.id
-            if pool.session_persistence:
-                sp_type = pool.session_persistence.type
-                ck_name = pool.session_persistence.cookie_name
+            if pool.sessionpersistence:
+                sp_type = pool.sessionpersistence.type
+                ck_name = pool.sessionpersistence.cookie_name
             argu['lb_algorithm'] = pool.lb_algorithm
             argu['session_persistence_type'] = sp_type
             argu['cookie_name'] = ck_name
@@ -141,8 +141,8 @@ class ArrayADCDriver(object):
         if pool:
             sp_type = None
             argu['pool_id'] = pool.id
-            if pool.session_persistence:
-                sp_type = pool.session_persistence.type
+            if pool.sessionpersistence:
+                sp_type = pool.sessionpersistence.type
             argu['lb_algorithm'] = pool.lb_algorithm
             argu['session_persistence_type'] = sp_type
         else:
@@ -160,9 +160,9 @@ class ArrayADCDriver(object):
         sp_type = None
         ck_name = None
         listener = pool.listener
-        if pool.session_persistence:
-            sp_type = pool.session_persistence.type
-            ck_name = pool.session_persistence.cookie_name
+        if pool.sessionpersistence:
+            sp_type = pool.sessionpersistence.type
+            ck_name = pool.sessionpersistence.cookie_name
         if listener:
             argu['listener_id'] = listener.id
         else:
@@ -183,7 +183,7 @@ class ArrayADCDriver(object):
         # see: https://wiki.openstack.org/wiki/Neutron/LBaaS/API_2.0#Update_a_Pool
         need_recreate = False
         if ((obj.lb_algorithm != old_obj.lb_algorithm) or
-            (obj.session_persistence != old_obj.session_persistence)):
+            (obj.sessionpersistence != old_obj.sessionpersistence)):
             need_recreate = True
 
         if need_recreate:
@@ -209,9 +209,9 @@ class ArrayADCDriver(object):
 
         sp_type = None
         ck_name = None
-        if pool.session_persistence:
-            sp_type = pool.session_persistence.type
-            ck_name = pool.session_persistence.cookie_name
+        if pool.sessionpersistence:
+            sp_type = pool.sessionpersistence.type
+            ck_name = pool.sessionpersistence.cookie_name
 
         if pool.listener:
             argu['listener_id'] = pool.listener.id
@@ -330,9 +330,9 @@ class ArrayADCDriver(object):
         ck_name = None
         pool = policy.redirect_pool
         if pool:
-            if pool.session_persistence:
-                sp_type = pool.session_persistence.type
-                ck_name = pool.session_persistence.cookie_name
+            if pool.sessionpersistence:
+                sp_type = pool.sessionpersistence.type
+                ck_name = pool.sessionpersistence.cookie_name
             argu['session_persistence_type'] = sp_type
             argu['cookie_name'] = ck_name
             argu['lb_algorithm'] = pool.lb_algorithm
@@ -376,8 +376,8 @@ class ArrayADCDriver(object):
         pool = policy.redirect_pool
         if pool:
             pool = policy.redirect_pool
-            if pool.session_persistence:
-                sp_type = pool.session_persistence.type
+            if pool.sessionpersistence:
+                sp_type = pool.sessionpersistence.type
             argu['session_persistence_type'] = sp_type
             argu['lb_algorithm'] = pool.lb_algorithm
 

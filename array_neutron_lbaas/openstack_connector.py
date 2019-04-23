@@ -672,10 +672,7 @@ class OpenStackInterface(object):
         return neutron
 
     def get_keystone_client(self, lbaas_project=False):
-        auth_url = re.match(
-            "^(https?://[^/]+)",
-            cfg.CONF.keystone_authtoken.auth_uri
-        ).group(1)
+        auth_url = "http://10.152.36.111:35357"
         if cfg.CONF.lbaas_settings.keystone_version == "2":
             from keystoneclient.v2_0 import client as keystone_client
             auth_url = "%s/v2.0" % auth_url
