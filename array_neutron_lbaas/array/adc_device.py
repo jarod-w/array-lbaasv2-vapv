@@ -416,6 +416,11 @@ class ADCDevice(object):
         return cmd
 
     @staticmethod
+    def activation_server(address, port):
+        cmd = "activationserver %s %s" % (address, port)
+        return cmd
+
+    @staticmethod
     def create_vlink(vlink_name):
         cmd = "slb vlink %s" % vlink_name
         return cmd

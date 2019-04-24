@@ -363,6 +363,10 @@ class OpenStackInterface(object):
                 sec_grp['security_group']['id'],
                 port=cfg.CONF.vapv_settings.rest_port,
             )
+            self.create_security_group_rule(
+                sec_grp['security_group']['id'],
+                port=cfg.CONF.vapv_settings.service_endpoint_port,
+            )
             # SSH access
             self.create_security_group_rule(
                 sec_grp['security_group']['id'],

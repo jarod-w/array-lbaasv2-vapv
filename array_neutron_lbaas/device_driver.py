@@ -76,7 +76,10 @@ lbaas_setting_opts = [
                 'If set to true, admin can specify which Availibility Zones '
                 'the primary and secondary vAPVs are deployed in.'),
     cfg.StrOpt('service_endpoint_address',
-               help='Service Endpoint Address of Services Director cluster'
+               help='Service Endpoint Address of Array Management Platform'
+               ),
+    cfg.StrOpt('service_endpoint_port', default=9997,
+               help='Service Endpoint port of Array Management Platform'
                ),
     cfg.StrOpt('tenant_customizations_db', help=
                'Database connection string for customizations DB '

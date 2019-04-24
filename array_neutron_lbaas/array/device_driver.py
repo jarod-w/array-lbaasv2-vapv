@@ -12,6 +12,7 @@
 #
 
 from oslo_log import log as logging
+from oslo_config import cfg
 
 from array_neutron_lbaas.array.apv_driver import ArrayAPVAPIDriver
 from array_neutron_lbaas.array.apv_driver import get_vlinks_by_policy
@@ -44,6 +45,8 @@ class ArrayADCDriver(object):
             driver = ArrayAPVAPIDriver(management_ip)
             if not only_cluster:
                 driver.create_loadbalancer(argu)
+                driver.activation_server(cfg.CONF.vapv_settings.service_endpoint_address,
+                                         cfg.CONF.vapv_settings.service_endpoint_port)
             driver.configure_cluster(vapv['cluster_id'], 100, lb.vip_address)
             driver.write_memory(argu)
 

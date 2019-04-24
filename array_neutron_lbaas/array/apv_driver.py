@@ -459,6 +459,12 @@ class ArrayAPVAPIDriver(object):
             self.run_cli_extend(base_rest_url, cmd_apv_write_memory)
 
 
+    def activation_server(self, address, port):
+        cmd_apv_activation_server = ADCDevice.activation_server(address, str(port))
+        for base_rest_url in self.base_rest_urls:
+            self.run_cli_extend(base_rest_url, cmd_apv_activation_server)
+
+
     def run_cli_extend(self, base_rest_url, cmd):
         if not cmd:
             return
