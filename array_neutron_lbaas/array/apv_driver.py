@@ -414,10 +414,8 @@ class ArrayAPVAPIDriver(object):
 
     def clear_cluster(self, cluster_id, vip_address):
         cmd_no_config_virtual_vip = ADCDevice.no_cluster_config_vip(cluster_id, vip_address)
-        cmd_no_config_virtual_priority = ADCDevice.no_cluster_config_priority(cluster_id)
         for base_rest_url in self.base_rest_urls:
             self.run_cli_extend(base_rest_url, cmd_no_config_virtual_vip)
-            self.run_cli_extend(base_rest_url, cmd_no_config_virtual_priority)
 
 
     def configure_ssl(self, vhost_name, vs_name, key_content, cert_content,

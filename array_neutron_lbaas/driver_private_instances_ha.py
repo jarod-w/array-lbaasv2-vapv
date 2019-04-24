@@ -63,6 +63,8 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverPrivateInstances):
             self.array_amphora_db.delete(context.session, hostname=hostnames[0])
         else:
             self.array_amphora_db.decrement_inuselb(context.session, hostnames[0])
+            vapv = self._get_vapv(context, hostnames[0])
+            self.array_vapv_driver.delete_loadbalancer(lb, vapv)
 
 ########
 # MISC #
