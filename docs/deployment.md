@@ -44,11 +44,6 @@ openstack image create --public --disk-format qcow2 --container-format bare --fi
 **Note:**
 
 * "$IMAGE\_PATH" should be replaced by the real directory where the vAPV image is saved.
-* Currently, the virtio-type NIC does not work very well with the vAPV image. As a workaround, you can change the NIC type that the vAPV image supports to e1000 by executing the "glance image-update" command. For example:
-
-```sh
-glance image-update --property hw_vif_model=e1000 $IMAGE_UUID
-```
 
 ### 2.2 Create the Flavor Used to Create vAPV Instance
 
