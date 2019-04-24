@@ -26,14 +26,14 @@ class ArrayADCDriver(object):
     def __init__(self):
         pass
 
-    def create_loadbalancer(self, lb, vapv, network_config):
+    def create_loadbalancer(self, lb, vapv, network_config, only_cluster = False):
         """
         Used to allocate the VIP to loadbalancer
         """
         LOG.debug("Create a loadbalancer on Array ADC device(%s)", lb)
         argu = {}
 
-        if 'data_netmask' not in network_config.keys():
+        if 'data_netmask' not in network_config.keys() and not only_cluster:
             LOG.error("Exit because data_netmask is none")
             return
 
@@ -42,7 +42,8 @@ class ArrayADCDriver(object):
             argu['netmask'] = network_config['data_netmask']
             management_ip = [vapv['pri_mgmt_address'],]
             driver = ArrayAPVAPIDriver(management_ip)
-            driver.create_loadbalancer(argu)
+            if not only_cluster:
+                driver.create_loadbalancer(argu)
             driver.configure_cluster(vapv['cluster_id'], 100, lb.vip_address)
             driver.write_memory(argu)
 
@@ -51,7 +52,8 @@ class ArrayADCDriver(object):
             argu['netmask'] = network_config['data_netmask']
             management_ip = [vapv['sec_mgmt_address'],]
             driver = ArrayAPVAPIDriver(management_ip)
-            driver.create_loadbalancer(argu)
+            if not only_cluster:
+                driver.create_loadbalancer(argu)
             driver.configure_cluster(vapv['cluster_id'], 99, lb.vip_address)
             driver.write_memory(argu)
 
@@ -67,9 +69,9 @@ class ArrayADCDriver(object):
 
         management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         argu['vip_address'] = lb.vip_address
-        argu['cluster_id'] = vapv.cluster_id
+        argu['cluster_id'] = vapv['cluster_id']
         driver = ArrayAPVAPIDriver(management_ip)
-        driver.delete_loadbalancer(argu)
+        driver.clear_cluster(argu['cluster_id'], argu['vip_address'])
         driver.write_memory(argu)
 
 
