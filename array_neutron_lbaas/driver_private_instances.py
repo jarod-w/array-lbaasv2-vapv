@@ -96,10 +96,26 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
 
             network_config['pri_data_ip'] = pri_data_port['fixed_ips'][0]['ip_address']
             network_config['data_netmask'] = self.openstack_connector.get_subnet_netmask(lb.vip_subnet_id)
+            network_config['data_gateway'] = self.openstack_connector.get_subnet_gateway(lb.vip_subnet_id)
             if sec_data_port:
                 network_config['sec_data_ip'] = sec_data_port['fixed_ips'][0]['ip_address']
 
         LOG.debug("hostname is: --%s--", hostname)
+
+        first_hostname = hostname
+        if type(hostname) is tuple:
+            for entry in hostname:
+                port_ids = self.openstack_connector.get_server_port_ids(entry)
+                self.openstack_connector.add_ip_to_ports(
+                    lb.vip_address, port_ids
+                )
+            first_hostname = hostname[0]
+        else:
+            port_ids = self.openstack_connector.get_server_port_ids(hostname)
+            self.openstack_connector.add_ip_to_ports(
+                lb.vip_address, port_ids
+            )
+
         if existed:
             hostname_str = hostname[0] if isinstance(hostname, tuple) else hostname
             self.array_amphora_db.increment_inuselb(context.session, hostname_str)
@@ -111,14 +127,6 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
                 network_config['sec_data_ip'] = None
             self.array_vapv_driver.create_loadbalancer(lb, vapv, network_config, only_cluster=True)
         else:
-            first_hostname = hostname
-            if type(hostname) is tuple:
-                for entry in hostname:
-                    port_ids = self.openstack_connector.get_server_port_ids(entry)
-                    self.openstack_connector.add_ip_to_ports(
-                        lb.vip_address, port_ids
-                    )
-                first_hostname = hostname[0]
             cluster_id = self.find_available_cluster_id(context, lb.vip_subnet_id)
             vapv = self.create_vapv(context, tenant_id=lb.tenant_id,
                 subnet_id=lb.vip_subnet_id,
@@ -177,6 +185,11 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
         if deleted:
             self.array_amphora_db.delete(context.session, hostname=hostname)
         else:
+            if deployment_model in ["PER_TENANT", "PER_SUBNET"]:
+                port_ids = self.openstack_connector.get_server_port_ids(hostname)
+                self.openstack_connector.delete_ip_from_ports(
+                    lb.vip_address, port_ids
+                )
             self.array_amphora_db.decrement_inuselb(context.session, hostname)
             vapv = self._get_vapv(context, hostname)
             self.array_vapv_driver.delete_loadbalancer(lb, vapv)
@@ -247,9 +260,6 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
 
     @logging_wrapper
     def stats(self, context, loadbalancer):
-        deployment_model = self._get_setting(
-            loadbalancer.tenant_id, "lbaas_settings", "deployment_model"
-        )
         hostname = self._get_hostname(loadbalancer)
         vapv = self._get_vapv(context, hostname)
         return super(ArrayDeviceDriverV2, self).stats(

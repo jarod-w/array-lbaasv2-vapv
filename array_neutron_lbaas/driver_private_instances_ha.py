@@ -62,6 +62,12 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverPrivateInstances):
         if deleted:
             self.array_amphora_db.delete(context.session, hostname=hostnames[0])
         else:
+            if deployment_model in ["PER_TENANT", "PER_SUBNET"]:
+                for entry in hostnames:
+                    port_ids = self.openstack_connector.get_server_port_ids(entry)
+                    self.openstack_connector.delete_ip_from_ports(
+                        lb.vip_address, port_ids
+                    )
             self.array_amphora_db.decrement_inuselb(context.session, hostnames[0])
             vapv = self._get_vapv(context, hostnames[0])
             self.array_vapv_driver.delete_loadbalancer(lb, vapv)

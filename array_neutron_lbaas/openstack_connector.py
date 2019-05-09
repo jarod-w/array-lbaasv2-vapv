@@ -365,7 +365,7 @@ class OpenStackInterface(object):
             )
             self.create_security_group_rule(
                 sec_grp['security_group']['id'],
-                port=cfg.CONF.vapv_settings.service_endpoint_port,
+                port=cfg.CONF.lbaas_settings.service_endpoint_port,
             )
             # SSH access
             self.create_security_group_rule(
@@ -660,12 +660,7 @@ class OpenStackInterface(object):
     def get_subnet_gateway(self, subnet_id):
         neutron = self.get_neutron_client()
         subnet = neutron.show_subnet(subnet_id)['subnet']
-        ports = neutron.list_ports(network_id=subnet['network_id'])['ports']
-        for port in ports:
-            for fixed_ip in port['fixed_ips']:
-                if fixed_ip['ip_address'] == subnet['gateway_ip']:
-                    return (subnet['gateway_ip'], port['mac_address'])
-        return (None, None)
+        return subnet['gateway_ip']
 
     def get_neutron_client(self):
         auth_token = self.get_auth_token(lbaas_project=False)
