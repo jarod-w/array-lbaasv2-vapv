@@ -41,18 +41,20 @@ class ArrayADCDriver(object):
         if 'pri_data_ip' in network_config.keys():
             argu['vip_address'] = network_config['pri_data_ip']
             argu['netmask'] = network_config['data_netmask']
+            argu['gateway'] = network_config['data_gateway']
             management_ip = [vapv['pri_mgmt_address'],]
             driver = ArrayAPVAPIDriver(management_ip)
             if not only_cluster:
                 driver.create_loadbalancer(argu)
-                driver.activation_server(cfg.CONF.vapv_settings.service_endpoint_address,
-                                         cfg.CONF.vapv_settings.service_endpoint_port)
+                driver.activation_server(cfg.CONF.lbaas_settings.service_endpoint_address,
+                                         cfg.CONF.lbaas_settings.service_endpoint_port)
             driver.configure_cluster(vapv['cluster_id'], 100, lb.vip_address)
             driver.write_memory(argu)
 
         if 'sec_data_ip' in network_config.keys():
             argu['vip_address'] = network_config['sec_data_ip']
             argu['netmask'] = network_config['data_netmask']
+            argu['gateway'] = network_config['data_gateway']
             management_ip = [vapv['sec_mgmt_address'],]
             driver = ArrayAPVAPIDriver(management_ip)
             if not only_cluster:

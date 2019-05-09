@@ -49,7 +49,7 @@ class ArrayAPVAPIDriver(object):
             return
 
         # create vip
-        self._create_vip(argu['vip_address'], argu['netmask'])
+        self._create_vip(argu['vip_address'], argu['netmask'], argu['gateway'])
 
 
     def delete_loadbalancer(self, argu):
@@ -103,15 +103,19 @@ class ArrayAPVAPIDriver(object):
                                )
 
 
-    def _create_vip(self, vip_address, netmask):
+    def _create_vip(self, vip_address, netmask, gateway):
         """ create vip"""
 
         interface_name = VAPV_TRIFFIC_INTERFACE
         # configure vip
         LOG.debug("Configure the vip address into interface")
         cmd_apv_config_ip = ADCDevice.configure_ip(interface_name, vip_address, netmask)
+        cmd_apv_clear_route = ADCDevice.clear_route()
+        cmd_apv_configure_route = ADCDevice.configure_route(gateway)
         for base_rest_url in self.base_rest_urls:
             self.run_cli_extend(base_rest_url, cmd_apv_config_ip)
+            self.run_cli_extend(base_rest_url, cmd_apv_clear_route)
+            self.run_cli_extend(base_rest_url, cmd_apv_configure_route)
 
 
     def _delete_vip(self):
