@@ -117,8 +117,12 @@ class ArrayADCDriver(object):
         management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         driver = ArrayAPVAPIDriver(management_ip)
         driver.configure_ssl(vhost_id, listener.id, key, cert, domain_name)
-        driver.write_memory()
 
+    def start_vhost(self, vapv, vhost_id):
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
+        driver = ArrayAPVAPIDriver(management_ip)
+        driver.start_vhost(vhost_id)
+        driver.write_memory()
 
     def clear_cert(self, vapv, listener, vhost_id, domain_name):
         management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]

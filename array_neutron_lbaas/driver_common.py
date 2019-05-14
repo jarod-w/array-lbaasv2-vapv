@@ -67,7 +67,7 @@ class vAPVDeviceDriverCommon(object):
 
     def __init__(self):
         self.openstack_connector = OpenStackInterface()
-        self.certificate_manager = CERT_MANAGER_PLUGIN.CertManager
+        self.certificate_manager = CERT_MANAGER_PLUGIN.CertManager()
         self.array_amphora_db = repository.ArrayAmphoraRepository()
         self.array_vapv_driver = device_driver.ArrayADCDriver()
         # Get connector to tenant customizations database if enabled...
@@ -341,22 +341,36 @@ class vAPVDeviceDriverCommon(object):
         return container_ref[container_ref.rfind("/")+1:]
 
     def _config_ssl(self, vapv, listener):
+        default_cid = listener.default_tls_container_id
+        vhost_id_idx = default_cid.rfind('/') + 1
+        vhost_id = default_cid[vhost_id_idx:]
         # Upload default certificate
         self._upload_certificate(
-            vapv, listener, listener.default_tls_container_id, default=True
+            vapv,
+            listener,
+            listener.default_tls_container_id,
+            vhost_id,
+            default=True
         )
         # Configure SNI certificates
         if listener.sni_containers:
             for sni_container in listener.sni_containers:
                 # Get cert from Barbican and upload to vAPV
                 self._upload_certificate(
-                    vapv, listener, sni_container.tls_container_id
+                    vapv,
+                    listener,
+                    sni_container.tls_container_id,
+                    vhost_id
                 )
+        self.array_vapv_driver.start_vhost(vapv, vhost_id)
 
-    def _upload_certificate(self, vapv, listener, container_id, default = False):
+    def _upload_certificate(self, vapv, listener, container_id, vhost_id,
+                            default = False):
         # Get the certificate from Barbican
         cert = self.certificate_manager.get_cert(
-            container_id,
+            project_id=listener.tenant_id,
+            cert_ref=container_id,
+            resource_ref=self.certificate_manager.get_service_url(listener.loadbalancer_id),
             service_name="arrayapv provider",
             check_only=True
         )
@@ -375,25 +389,36 @@ class vAPVDeviceDriverCommon(object):
         if not default:
             cert_hostnames = get_host_names(cert.get_certificate())
             domain_name = cert_hostnames['cn']
-        self.array_vapv_driver.upload_cert(vapv, listener, container_id,
+        self.array_vapv_driver.upload_cert(vapv, listener, vhost_id,
                 cert.get_private_key(), cert_chain, domain_name)
 
     def _clean_up_certificates(self, vapv, listener):
-        # Upload default certificate
+        default_cid = listener.default_tls_container_id
+        vhost_id_idx = default_cid.rfind('/') + 1
+        vhost_id = default_cid[vhost_id_idx:]
+        # Delete default certificate
         self._no_certificate(
-            vapv, listener, listener.default_tls_container_id, default=True
+            vapv,
+            listener,
+            listener.default_tls_container_id,
+            vhost_id,
+            default=True
         )
-        # Configure SNI certificates
+        # Delete SNI certificates
         if listener.sni_containers:
             for sni_container in listener.sni_containers:
-                # Get cert from Barbican and upload to vAPV
                 self._no_certificate(
-                    vapv, listener, sni_container.tls_container_id
+                    vapv,
+                    listener,
+                    sni_container.tls_container_id,
+                    vhost_id
                 )
 
-    def _no_certificate(self, vapv, listener, container_id, default=False):
+    def _no_certificate(self, vapv, listener, container_id, vhost_id, default=False):
         cert = self.certificate_manager.get_cert(
-            container_id,
+            project_id=listener.tenant_id,
+            cert_ref=container_id,
+            resource_ref=self.certificate_manager.get_service_url(listener.loadbalancer_id),
             service_name="arrayapv provider",
             check_only=True
         )
@@ -401,7 +426,6 @@ class vAPVDeviceDriverCommon(object):
         if not default:
             cert_hostnames = get_host_names(cert.get_certificate())
             domain_name = cert_hostnames['cn']
-        self.array_vapv_driver.clear_cert(vapv, listener, container_id,
-                                         domain_name)
+        self.array_vapv_driver.clear_cert(vapv, listener, vhost_id, domain_name)
 
 

@@ -92,6 +92,11 @@ class ADCDevice(object):
         return cmd
 
     @staticmethod
+    def clear_ssl_vhost(vhost_name):
+        cmd = "clear ssl host %s\nYES\n" % (vhost_name)
+        return cmd
+
+    @staticmethod
     def no_ssl_vhost(vhost_name, vs_name):
         cmd = "no ssl host virtual %s %s" % (vhost_name, vs_name)
         return cmd
@@ -99,51 +104,51 @@ class ADCDevice(object):
     @staticmethod
     def import_ssl_key(vhost_name, key_content, domain_name=None):
         if domain_name:
-            cmd = 'ssl import key %s %s\nYES\n%s\n...\n' % (vhost_name, domain_name, key_content)
+            cmd = "ssl import key %s 1 \"%s\"\nYES\n%s\n...\n" % (vhost_name, domain_name, key_content)
         else:
-            cmd = 'ssl import key %s\nYES\n%s\n...\n' % (vhost_name, key_content)
+            cmd = "ssl import key %s\nYES\n%s\n...\n" % (vhost_name, key_content)
         return cmd
 
     @staticmethod
     def import_ssl_cert(vhost_name, cert_content, domain_name=None):
         if domain_name:
-            cmd = 'ssl import certificate %s 1 %s\nYES\n%s\n...\n' % (vhost_name, domain_name, cert_content)
+            cmd = "ssl import certificate %s 1 \"%s\"\nYES\n%s\n...\n" % (vhost_name, domain_name, cert_content)
         else:
-            cmd = 'ssl import certificate %s\nYES\n%s\n...\n' % (vhost_name, cert_content)
+            cmd = "ssl import certificate %s\nYES\n%s\n...\n" % (vhost_name, cert_content)
         return cmd
 
     @staticmethod
     def no_ssl_cert(vhost_name, domain_name=None):
         if domain_name:
-            cmd = "no ssl certificate %s 1 %s" % (vhost_name, domain_name)
+            cmd = "no ssl certificate %s 1 \"%s\"\nYES\n" % (vhost_name, domain_name)
         else:
-            cmd = "no ssl certificate %s 1 ''" % (vhost_name)
+            cmd = "no ssl certificate %s 1 \"\"\nYES\n" % (vhost_name)
         return cmd
 
     @staticmethod
     def activate_certificate(vhost_name, domain_name=None):
         if domain_name:
-            cmd = "ssl activate certificate %s 1 %s" % (vhost_name, domain_name)
+            cmd = "ssl activate certificate %s 1 \"%s\"\nYES\n" % (vhost_name, domain_name)
         else:
-            cmd = "ssl activate certificate %s" % (vhost_name)
+            cmd = "ssl activate certificate %s\nYES\n" % (vhost_name)
         return cmd
 
     @staticmethod
     def deactivate_certificate(vhost_name, domain_name=None):
         if domain_name:
-            cmd = "ssl deactivate certificate %s %s all" % (vhost_name, domain_name)
+            cmd = "ssl deactivate certificate %s \"%s\" all" % (vhost_name, domain_name)
         else:
-            cmd = "ssl deactivate certificate %s '' all" % (vhost_name)
+            cmd = "ssl deactivate certificate %s \"\" all" % (vhost_name)
         return cmd
 
     @staticmethod
     def associate_domain_to_vhost(vhost_name, domain_name):
-        cmd = 'ssl sni %s %s' % (vhost_name, domain_name)
+        cmd = "ssl sni %s \"%s\"" % (vhost_name, domain_name)
         return cmd
 
     @staticmethod
     def disassociate_domain_to_vhost(vhost_name, domain_name):
-        cmd = 'clear ssl sni %s %s' % (vhost_name, domain_name)
+        cmd = "clear ssl sni %s \"%s\"\nYES\n" % (vhost_name, domain_name)
         return cmd
 
     @staticmethod

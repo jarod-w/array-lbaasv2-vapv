@@ -123,6 +123,7 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
             #FIXME: should use more gracefully way to fix the issue
             network_config['pri_data_ip'] = None
             network_config['data_netmask'] = None
+            network_config['data_gateway'] = None
             if cfg.CONF.lbaas_settings.deploy_ha_pairs:
                 network_config['sec_data_ip'] = None
             self.array_vapv_driver.create_loadbalancer(lb, vapv, network_config, only_cluster=True)
