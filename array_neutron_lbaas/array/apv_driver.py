@@ -31,6 +31,16 @@ VAPV_REST_PASSWORD="click1"
 def get_vlinks_by_policy(policy_id):
     return [policy_id + "_v" + str(idx) for idx in range(1, 3)]
 
+
+def parse_rs_status(response, rs_name):
+    res_string = response.text.replace("-", "")
+    start_idx = res_string.find(rs_name) + len(rs_name)
+    end_idx = res_string.find("Health Check")
+    if "UP" in res_string[start_idx, end_idx]:
+        return "ACTIVE"
+    return "INACTIVE"
+
+
 class ArrayAPVAPIDriver(object):
     """ The real implementation on host to push config to
         APV instance via RESTful API
@@ -478,6 +488,13 @@ class ArrayAPVAPIDriver(object):
         for base_rest_url in self.base_rest_urls:
             self.run_cli_extend(base_rest_url, cmd_apv_activation_server)
 
+
+    def get_rs_health(self, rs_name):
+        cmd_show_rs_health = ADCDevice.show_rs_health(rs_name)
+        for base_rest_url in self.base_rest_urls:
+            res = self.run_cli_extend(base_rest_url, cmd_show_rs_health)
+            # FIXME: should check the rs status in all vapvs
+            return parse_rs_status(res)
 
     def run_cli_extend(self, base_rest_url, cmd):
         if not cmd:

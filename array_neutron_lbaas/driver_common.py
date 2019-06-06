@@ -180,7 +180,8 @@ class vAPVDeviceDriverCommon(object):
         """
         Return the health of the specified node.
         """
-        return "ACTIVE"
+        active = self.array_vapv_driver.get_member_health(member, vapv)
+        return active
 
 ############
 # MONITORS #

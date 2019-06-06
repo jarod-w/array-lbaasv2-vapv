@@ -469,6 +469,11 @@ class ArrayADCDriver(object):
         driver = ArrayAPVAPIDriver(management_ip)
         driver.write_memory(argu)
 
+    def get_member_health(self, member, vapv):
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
+        driver = ArrayAPVAPIDriver(management_ip)
+        driver.get_rs_health(member.id)
+
     def delete_all_rules(self, policy, vapv):
         argu = {}
         rules = policy.rules

@@ -436,6 +436,11 @@ class ADCDevice(object):
         return cmd
 
     @staticmethod
+    def show_rs_health(rs_name):
+        cmd = "show health server %s" % rs_name
+        return cmd
+
+    @staticmethod
     def write_memory():
         cmd = "write memory"
         return cmd
