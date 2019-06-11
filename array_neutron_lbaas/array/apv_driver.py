@@ -488,6 +488,75 @@ class ArrayAPVAPIDriver(object):
         for base_rest_url in self.base_rest_urls:
             self.run_cli_extend(base_rest_url, cmd_apv_activation_server)
 
+    def init_qos_function(self):
+        cmd_qos_interface_out = ADCDevice.define_qos_interface()
+        cmd_qos_interface_in = ADCDevice.define_qos_interface(is_out=False)
+        cmd_qos_root_queue_out = ADCDevice.define_qos_root_queue()
+        cmd_qos_root_queue_in = ADCDevice.define_qos_root_queue(is_out=False)
+        for base_rest_url in self.base_rest_urls:
+            self.run_cli_extend(base_rest_url, cmd_qos_interface_out)
+            self.run_cli_extend(base_rest_url, cmd_qos_interface_in)
+            self.run_cli_extend(base_rest_url, cmd_qos_root_queue_out)
+            self.run_cli_extend(base_rest_url, cmd_qos_root_queue_in)
+
+    def set_vs_bandwidth(self, argu):
+        vip_address = argu['vip_address']
+        bandwidth = argu['bandwidth']
+        lb_id = argu['lb_id']
+        q_name_in = "%s_qi" % lb_id[:5]
+        q_name_out = "%s_qo" % lb_id[:5]
+        f_name_in = "%s_fi" % lb_id[:5]
+        f_name_out = "%s_fo" % lb_id[:5]
+        cmd_disable_qos_out = ADCDevice.disable_qos_interface()
+        cmd_disable_qos_in = ADCDevice.disable_qos_interface(is_out=False)
+        cmd_undefine_qos_filter_in = ADCDevice.undefine_qos_filter(f_name_out)
+        cmd_undefine_qos_filter_out = ADCDevice.undefine_qos_filter(f_name_in)
+        cmd_undefine_qos_sub_queue_in = ADCDevice.undefine_qos_sub_queue(q_name_out)
+        cmd_undefine_qos_sub_queue_out = ADCDevice.undefine_qos_sub_queue(q_name_in)
+        cmd_qos_sub_queue_out = ADCDevice.define_qos_sub_queue(q_name_out, bandwidth)
+        cmd_qos_sub_queue_in = ADCDevice.define_qos_sub_queue(q_name_in, bandwidth, is_out=False)
+        cmd_qos_filter_out = ADCDevice.define_qos_filter(f_name_out, q_name_out, vip_address)
+        cmd_qos_filter_in = ADCDevice.define_qos_filter(f_name_in, q_name_in, vip_address, is_out=False)
+        cmd_enable_qos_out = ADCDevice.enable_qos_interface()
+        cmd_enable_qos_in = ADCDevice.enable_qos_interface(is_out=False)
+        for base_rest_url in self.base_rest_urls:
+            self.run_cli_extend(base_rest_url, cmd_disable_qos_out)
+            self.run_cli_extend(base_rest_url, cmd_disable_qos_in)
+            self.run_cli_extend(base_rest_url, cmd_undefine_qos_filter_in)
+            self.run_cli_extend(base_rest_url, cmd_undefine_qos_filter_out)
+            self.run_cli_extend(base_rest_url, cmd_undefine_qos_sub_queue_in)
+            self.run_cli_extend(base_rest_url, cmd_undefine_qos_sub_queue_out)
+            self.run_cli_extend(base_rest_url, cmd_qos_sub_queue_out)
+            self.run_cli_extend(base_rest_url, cmd_qos_sub_queue_in)
+            self.run_cli_extend(base_rest_url, cmd_qos_filter_out)
+            self.run_cli_extend(base_rest_url, cmd_qos_filter_in)
+            self.run_cli_extend(base_rest_url, cmd_enable_qos_out)
+            self.run_cli_extend(base_rest_url, cmd_enable_qos_in)
+
+    def del_vs_bandwidth(self, argu):
+        lb_id = argu['lb_id']
+        q_name_in = "%s_qi" % lb_id[:5]
+        q_name_out = "%s_qo" % lb_id[:5]
+        f_name_in = "%s_fi" % lb_id[:5]
+        f_name_out = "%s_fo" % lb_id[:5]
+        cmd_disable_qos_out = ADCDevice.disable_qos_interface()
+        cmd_disable_qos_in = ADCDevice.disable_qos_interface(is_out=False)
+        cmd_undefine_qos_filter_in = ADCDevice.undefine_qos_filter(f_name_out)
+        cmd_undefine_qos_filter_out = ADCDevice.undefine_qos_filter(f_name_in)
+        cmd_undefine_qos_sub_queue_in = ADCDevice.undefine_qos_sub_queue(q_name_out)
+        cmd_undefine_qos_sub_queue_out = ADCDevice.undefine_qos_sub_queue(q_name_in)
+        cmd_enable_qos_out = ADCDevice.enable_qos_interface()
+        cmd_enable_qos_in = ADCDevice.enable_qos_interface(is_out=False)
+        for base_rest_url in self.base_rest_urls:
+            self.run_cli_extend(base_rest_url, cmd_disable_qos_out)
+            self.run_cli_extend(base_rest_url, cmd_disable_qos_in)
+            self.run_cli_extend(base_rest_url, cmd_undefine_qos_filter_in)
+            self.run_cli_extend(base_rest_url, cmd_undefine_qos_filter_out)
+            self.run_cli_extend(base_rest_url, cmd_undefine_qos_sub_queue_in)
+            self.run_cli_extend(base_rest_url, cmd_undefine_qos_sub_queue_out)
+            self.run_cli_extend(base_rest_url, cmd_enable_qos_out)
+            self.run_cli_extend(base_rest_url, cmd_enable_qos_in)
+
 
     def get_rs_health(self, rs_name):
         cmd_show_rs_health = ADCDevice.show_rs_health(rs_name)

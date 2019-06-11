@@ -441,6 +441,80 @@ class ADCDevice(object):
         return cmd
 
     @staticmethod
+    def define_qos_interface(is_out=True):
+        if is_out:
+            cmd = "qos interface port2 OUT 3Gb"
+        else:
+            cmd = "qos interface port2 IN 3Gb"
+        return cmd
+
+    @staticmethod
+    def undefine_qos_interface(is_out=True):
+        if is_out:
+            cmd = "no qos interface port2 OUT"
+        else:
+            cmd = "no qos interface port2 IN"
+        return cmd
+
+    @staticmethod
+    def define_qos_root_queue(is_out=True):
+        if is_out:
+            cmd = "qos queue root qr_oall port2 OUT 3Gb 3"
+        else:
+            cmd = "qos queue root qr_iall port2 IN 3Gb 3"
+        return cmd
+
+    @staticmethod
+    def undefine_qos_root_queue(is_out=True):
+        if is_out:
+            cmd = "no qos queue root qr_oall"
+        else:
+            cmd = "no qos queue root qr_iall"
+        return cmd
+
+    @staticmethod
+    def define_qos_sub_queue(q_name, bandwidth, is_out=True):
+        if is_out:
+            cmd = "qos queue sub %s qr_oall port2 OUT %dMb" % (q_name, bandwidth)
+        else:
+            cmd = "qos queue sub %s qr_iall port2 IN %dMb" % (q_name, bandwidth)
+        return cmd
+
+    @staticmethod
+    def undefine_qos_sub_queue(q_name):
+        cmd = "no qos queue sub %s" % q_name
+        return cmd
+
+    @staticmethod
+    def define_qos_filter(f_name, q_name, vip_address, is_out=True):
+        if is_out:
+            cmd = "qos filter %s %s 0.0.0.0 0.0.0.0 %s 255.255.255.255 0 any" % (f_name, q_name, vip_address)
+        else:
+            cmd = "qos filter %s %s %s 255.255.255.255 0.0.0.0 0.0.0.0 0 any" % (f_name, q_name, vip_address)
+        return cmd
+
+    @staticmethod
+    def undefine_qos_filter(f_name):
+        cmd = "no qos filter %s" % f_name
+        return cmd
+
+    @staticmethod
+    def enable_qos_interface(is_out=True):
+        if is_out:
+            cmd = "qos enable port2 OUT"
+        else:
+            cmd = "qos enable port2 IN"
+        return cmd
+
+    @staticmethod
+    def disable_qos_interface(is_out=True):
+        if is_out:
+            cmd = "qos disable port2 OUT"
+        else:
+            cmd = "qos disable port2 IN"
+        return cmd
+
+    @staticmethod
     def write_memory():
         cmd = "write memory"
         return cmd

@@ -27,7 +27,8 @@ class ArrayADCDriver(object):
     def __init__(self):
         pass
 
-    def create_loadbalancer(self, lb, vapv, network_config, only_cluster = False):
+    def create_loadbalancer(self, lb, vapv, network_config,
+                            bandwidth = -1, only_cluster = False):
         """
         Used to allocate the VIP to loadbalancer
         """
@@ -38,6 +39,8 @@ class ArrayADCDriver(object):
             LOG.error("Exit because data_netmask is none")
             return
 
+        argu['lb_id'] = lb.id
+        argu['bandwidth'] = bandwidth
         if 'pri_data_ip' in network_config.keys():
             argu['vip_address'] = network_config['pri_data_ip']
             argu['netmask'] = network_config['data_netmask']
@@ -49,6 +52,8 @@ class ArrayADCDriver(object):
                 driver.activation_server(cfg.CONF.lbaas_settings.service_endpoint_address,
                                          cfg.CONF.lbaas_settings.service_endpoint_port)
             driver.configure_cluster(vapv['cluster_id'], 100, lb.vip_address)
+            if bandwidth != -1:
+                driver.set_vs_bandwidth(argu)
             driver.write_memory(argu)
 
         if 'sec_data_ip' in network_config.keys():
@@ -60,22 +65,34 @@ class ArrayADCDriver(object):
             if not only_cluster:
                 driver.create_loadbalancer(argu)
             driver.configure_cluster(vapv['cluster_id'], 99, lb.vip_address)
+            if bandwidth != -1:
+                driver.set_vs_bandwidth(argu)
             driver.write_memory(argu)
 
 
-    def update_loadbalancer(self, obj, old_obj):
-        # see: https://wiki.openstack.org/wiki/Neutron/LBaaS/API_2.0#Update_a_Load_Balancer
-        LOG.debug("Nothing to do at LB updating")
+    def update_loadbalancer(self, lb, old_obj, vapv, bandwidth = -1):
+        argu = {}
+        LOG.debug("Update a loadbalancer on Array ADC device")
+        if bandwidth == -1:
+            return
+        argu['lb_id'] = lb.id
+        argu['bandwidth'] = bandwidth
+        argu['vip_address'] = lb.vip_address
+        management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
+        driver = ArrayAPVAPIDriver(management_ip)
+        driver.set_vs_bandwidth(argu)
 
-
-    def delete_loadbalancer(self, lb, vapv):
+    def delete_loadbalancer(self, lb, vapv, bandwidth = -1):
         LOG.debug("Delete a loadbalancer on Array ADC device")
         argu = {}
 
         management_ip = [vapv['pri_mgmt_address'], vapv['sec_mgmt_address'],]
         argu['vip_address'] = lb.vip_address
+        argu['lb_id'] = lb.id
         argu['cluster_id'] = vapv['cluster_id']
         driver = ArrayAPVAPIDriver(management_ip)
+        if bandwidth != -1:
+            driver.del_vs_bandwidth(argu)
         driver.clear_cluster(argu['cluster_id'], argu['vip_address'])
         driver.write_memory(argu)
 

@@ -54,8 +54,17 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
         sec_data_port = None
         network_config = {}
         hostname = self._get_hostname(lb)
+        bandwidth = -1
 
         LOG.debug("---enter create_loadbalancer---")
+        try:
+            bandwidth = lb.bandwidth
+            if bandwidth == 0:
+                raise AttributeError()
+        except AttributeError:
+            bandwidth = self._get_setting(
+                lb.tenant_id, "services_director_settings", "bandwidth"
+            )
         if deployment_model == "PER_LOADBALANCER":
             ports = self._spawn_vapv(hostname, lb)
         elif deployment_model == "PER_SUBNET":
@@ -126,7 +135,7 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
             network_config['data_gateway'] = None
             if cfg.CONF.lbaas_settings.deploy_ha_pairs:
                 network_config['sec_data_ip'] = None
-            self.array_vapv_driver.create_loadbalancer(lb, vapv, network_config, only_cluster=True)
+            self.array_vapv_driver.create_loadbalancer(lb, vapv, network_config, bandwidth=bandwidth, only_cluster=True)
         else:
             cluster_id = self.find_available_cluster_id(context, lb.vip_subnet_id)
             vapv = self.create_vapv(context, tenant_id=lb.tenant_id,
@@ -137,7 +146,7 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
                 cluster_id=cluster_id,
                 hostname=first_hostname
             )
-            self.array_vapv_driver.create_loadbalancer(lb, vapv, network_config)
+            self.array_vapv_driver.create_loadbalancer(lb, vapv, network_config, bandwidth = bandwidth)
 
         LOG.debug("create lb vapv: --%s--", vapv)
         description_updater_thread = DescriptionUpdater(
@@ -150,10 +159,15 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
         """
         Can update the bandwidth allocation of the vAPV instance.
         """
-        LOG.debug("\nupdate_loadbalancer({}): called".format(lb.id))
-        # FIXME: Update bandwidth allocation
-        #if old is not None and old.bandwidth != lb.bandwidth:
-        #    self._update_instance_bandwidth(hostname, lb.bandwidth)
+        try:
+            if lb.bandwidth == 0:
+                raise AttributeError()
+            if lb.bandwidth != old.bandwidth:
+                hostname = self._get_hostname(lb)
+                vapv = self._get_vapv(context, hostname)
+                self.array_vapv_driver.update_loadbalancer(lb, old, vapv, bandwidth = lb.bandwidth)
+        except AttributeError:
+            pass
 
     @logging_wrapper
     def delete_loadbalancer(self, context, lb):
@@ -165,6 +179,15 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
         When the last TrafficIP Group has been deleted, the instance is
         destroyed.
         """
+        bandwidth = -1
+        try:
+            bandwidth = lb.bandwidth
+            if bandwidth == 0:
+                raise AttributeError()
+        except AttributeError:
+            bandwidth = self._get_setting(
+                lb.tenant_id, "services_director_settings", "bandwidth"
+            )
         deployment_model = self._get_setting(
             lb.tenant_id, "lbaas_settings", "deployment_model"
         )
@@ -193,7 +216,7 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
                 )
             self.array_amphora_db.decrement_inuselb(context.session, hostname)
             vapv = self._get_vapv(context, hostname)
-            self.array_vapv_driver.delete_loadbalancer(lb, vapv)
+            self.array_vapv_driver.delete_loadbalancer(lb, vapv, bandwidth=bandwidth)
 
 #############
 # LISTENERS #
@@ -275,9 +298,6 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
         identifier = self.openstack_connector.get_identifier(lb)
         return "vapv-{}".format(identifier)
 
-    def _update_instance_bandwidth(self, hostnames, bandwidth):
-        pass
-
     def _get_vapv(self, context, hostname):
         """
         Gets available instance of Array vAPV.
@@ -335,15 +355,6 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverCommon):
                 security_groups = [sec_grp, mgmt_sec_grp]
                 port_ids.append(data_port['id'])
                 port_ids.append(mgmt_port['id'])
-            # Register instance record...
-            try:
-                bandwidth = lb.bandwidth
-                if bandwidth == 0:
-                    raise AttributeError()
-            except AttributeError:
-                bandwidth = self._get_setting(
-                    lb.tenant_id, "services_director_settings", "bandwidth"
-                )
             # Start instance...
             vm = self.openstack_connector.create_vapv(hostname, lb, ports)
             vms.append(vm['id'])

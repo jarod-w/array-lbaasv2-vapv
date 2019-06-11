@@ -163,14 +163,6 @@ class ArrayDeviceDriverV2(vAPVDeviceDriverPrivateInstances):
                 port_ids.append(mgmt_port['id'])
 
             # Create instances...
-            try:
-                bandwidth = lb.bandwidth
-                if bandwidth == 0:
-                    raise AttributeError()
-            except AttributeError:
-                bandwidth = self._get_setting(
-                    lb.tenant_id, "services_director_settings", "bandwidth"
-                )
             avoid = None
             for host in hostnames:
                 # Launch vAPV...
